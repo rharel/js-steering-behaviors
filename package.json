@@ -1,0 +1,30 @@
+{
+  "name": "js-steering-behaviors",
+  "version": "0.0.0",
+  "description": "Reynolds' simple steering behaviors for character animation.",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "grunt test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rharel/js-steering-behaviors.git"
+  },
+  "keywords": [
+    "steering",
+    "behavior",
+    "path",
+    "planning",
+    "character",
+    "animation",
+    "reynolds"
+  ],
+  "author": "Raoul Harel",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/rharel/js-steering-behaviors/issues"
+  },
+  "homepage": "https://github.com/rharel/js-steering-behaviors#readme"
+}
