@@ -137,7 +137,7 @@ describe ('Vec2', function() {
     });
   });
 
-  describe ('clone', function() {
+  describe ('clone/copy', function() {
 
     var a = new Vec2(1, 2);
 
@@ -151,7 +151,7 @@ describe ('Vec2', function() {
 
     it ('in-place', function() {
 
-      a.clone_(new Vec2(3, 4));
+      a.copy_(new Vec2(3, 4));
 
       expect(a.x).to.be.equal(3);
       expect(a.y).to.be.equal(4);
@@ -179,4 +179,15 @@ describe ('Vec2', function() {
       expect(a.angle(b)).to.be.closeTo(Math.PI / 4, 0.001);
     });
   });
+
+  describe ('distance', function() {
+
+    var a = new Vec2(0, 0);
+    var b = new Vec2(3, 4);
+    it ('should compute distance and distance ^ 2', function() {
+
+      expect(a.distance2(b)).to.be.equal(25);
+      expect(a.distance(b)).to.be.equal(5);
+    });
+  })
 });

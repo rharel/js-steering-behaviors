@@ -90,6 +90,16 @@ Vec2.prototype = {
     return Math.sqrt(this.len2());
   },
 
+  distance2: function(other) {
+
+    return this.sub(other).len2();
+  },
+
+  distance: function(other) {
+
+    return Math.sqrt(this.distance2(other));
+  },
+
   unit: function() {
 
     var len = this.len();
@@ -110,7 +120,7 @@ Vec2.prototype = {
     return new Vec2(this._x, this._y);
   },
 
-  clone_: function(other) {
+  copy_: function(other) {
 
     this._x = other._x;
     this._y = other._y;
