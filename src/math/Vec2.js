@@ -138,6 +138,22 @@ Vec2.prototype = {
     return Math.acos(this.dot(other) / (this.len() * other.len()));
   },
 
+  map: function(fn) {
+
+    return new Vec2(
+      fn(this._x),
+      fn(this._y)
+    );
+  },
+
+  map_: function(fn) {
+
+    this._x = fn(this._x);
+    this._y = fn(this._y);
+
+    return this;
+  },
+
   set: function(x, y) {
 
     this._x = x;

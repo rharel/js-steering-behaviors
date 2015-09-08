@@ -7,7 +7,6 @@
 
 
 var expect = require('chai').expect;
-
 var Vec2 = require('../../src/math/Vec2');
 
 
@@ -189,5 +188,29 @@ describe ('Vec2', function() {
       expect(a.distance2(b)).to.be.equal(25);
       expect(a.distance(b)).to.be.equal(5);
     });
-  })
+  });
+
+  describe ('map', function() {
+
+    var a = new Vec2(1, 2);
+    var fn = function(x) { return 3 * x; };
+
+    it ('normal', function() {
+
+      var b = a.map(fn);
+
+      expect(b.x).to.be.equal(3);
+      expect(b.y).to.be.equal(6);
+    });
+
+    it ('in-place', function() {
+
+      a.map_(fn);
+
+      expect(a.x).to.be.equal(3);
+      expect(a.y).to.be.equal(6);
+    });
+  });
 });
+
+
