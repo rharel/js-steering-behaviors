@@ -180,6 +180,17 @@ describe ('Vec2', function() {
     });
   });
 
+  describe ('cross', function() {
+
+    var a = new Vec2(1, 0);
+    var b = new Vec2(0, 2);
+
+    it ('should equal the magnitude of a 3d-cross\' z component', function() {
+
+      expect(a.cross(b)).to.be.equal(2);
+    });
+  });
+
   describe ('angle', function() {
 
     var a = new Vec2(3, 0);
@@ -188,6 +199,18 @@ describe ('Vec2', function() {
     it ('should be pi/4', function() {
 
       expect(a.angle(b)).to.be.closeTo(Math.PI / 4, 0.001);
+    });
+  });
+
+  describe ('signed angle', function() {
+
+    var a = new Vec2(3, 0);
+    var b = new Vec2(8, 8);
+
+    it ('should distinguish from positive to negative rotation', function() {
+
+      expect(a.signed_angle(b)).to.be.closeTo(Math.PI / 4, 0.001);
+      expect(b.signed_angle(a)).to.be.closeTo(-Math.PI / 4, 0.001);
     });
   });
 

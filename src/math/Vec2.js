@@ -156,9 +156,19 @@ Vec2.prototype = {
     return this._x * other._x + this._y * other._y;
   },
 
+  cross: function(other) {
+
+    return this._x * other._y - this._y * other._x;
+  },
+
   angle: function(other) {
 
     return Math.acos(this.dot(other) / (this.len() * other.len()));
+  },
+
+  signed_angle: function(other) {
+
+    return Math.atan2(this.cross(other), this.dot(other));
   },
 
   map: function(fn) {
