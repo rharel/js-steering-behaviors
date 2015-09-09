@@ -64,6 +64,29 @@ Vec2.prototype = {
     return this;
   },
 
+  rotate: function(angle) {
+
+    var sin = Math.sin(angle);
+    var cos = Math.cos(angle);
+
+    return new Vec2(
+      this._x * cos - this._y * sin,
+      this._x * sin + this._y * cos
+    );
+  },
+
+  rotate_: function(angle) {
+
+    var sin = Math.sin(angle);
+    var cos = Math.cos(angle);
+
+    var x = this._x;
+    this._x = x * cos - this._y * sin;
+    this._y = x * sin + this._y * cos;
+
+    return this;
+  },
+
   scale: function(scalar) {
 
     return new Vec2(

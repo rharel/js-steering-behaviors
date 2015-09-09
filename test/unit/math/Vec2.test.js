@@ -7,7 +7,7 @@
 
 
 var expect = require('chai').expect;
-var Vec2 = require('../../src/math/Vec2');
+var Vec2 = require('../../../src/math/Vec2');
 
 
 describe ('Vec2', function() {
@@ -45,7 +45,7 @@ describe ('Vec2', function() {
     });
   });
 
-  function test_operator(name, x1, y1, x2, y2, x3, y3) {
+  function test_binary_operator(name, x1, y1, x2, y2, x3, y3) {
 
     describe (name, function() {
 
@@ -75,30 +75,42 @@ describe ('Vec2', function() {
     });
   }
 
-  test_operator('add', 0, 1, 2, 3, 2, 4);
-  test_operator('sub', 4, 3, 1, 2, 3, 1);
-  test_operator('mul', 2, 3, 4, 5, 8, 15);
+  test_binary_operator('add', 0, 1, 2, 3, 2, 4);
+  test_binary_operator('sub', 4, 3, 1, 2, 3, 1);
+  test_binary_operator('mul', 2, 3, 4, 5, 8, 15);
 
-  describe ('scale', function() {
+  function test_unary_operator(name, x1, y1, arg, x2, y2) {
 
-    var a = new Vec2(1, 2);
+    describe (name, function() {
 
-    it ('normal', function() {
+      var a;
 
-      var c = a.scale(2);
+      beforeEach(function() {
 
-      expect(c.x).to.be.equal(2);
-      expect(c.y).to.be.equal(4);
+        a = new Vec2(x1, y1);
+      });
+
+      it ('normal', function() {
+
+        var c = a[name](arg);
+
+        expect(c.x).to.be.closeTo(x2, 0.001);
+        expect(c.y).to.be.closeTo(y2, 0.001);
+      });
+
+      it ('in-place', function() {
+
+        a[name + '_'](arg);
+
+        expect(a.x).to.be.closeTo(x2, 0.001);
+        expect(a.y).to.be.closeTo(y2, 0.001);
+      });
     });
+  }
 
-    it ('in-place', function() {
-
-      a.scale_(2);
-
-      expect(a.x).to.be.equal(2);
-      expect(a.y).to.be.equal(4);
-    });
-  });
+  test_unary_operator('rotate', 0, 1, Math.PI / 2, -1, 0);
+  test_unary_operator('scale', 1, 2, 3, 3, 6);
+  test_unary_operator('map', 2, 3, function(x) { return x * x; }, 4, 9);
 
   describe ('len', function() {
 
@@ -183,32 +195,11 @@ describe ('Vec2', function() {
 
     var a = new Vec2(0, 0);
     var b = new Vec2(3, 4);
+
     it ('should compute distance and distance ^ 2', function() {
 
       expect(a.distance2(b)).to.be.equal(25);
       expect(a.distance(b)).to.be.equal(5);
-    });
-  });
-
-  describe ('map', function() {
-
-    var a = new Vec2(1, 2);
-    var fn = function(x) { return 3 * x; };
-
-    it ('normal', function() {
-
-      var b = a.map(fn);
-
-      expect(b.x).to.be.equal(3);
-      expect(b.y).to.be.equal(6);
-    });
-
-    it ('in-place', function() {
-
-      a.map_(fn);
-
-      expect(a.x).to.be.equal(3);
-      expect(a.y).to.be.equal(6);
     });
   });
 });
