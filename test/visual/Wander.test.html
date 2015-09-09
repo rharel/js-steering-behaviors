@@ -10,7 +10,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Seek Visual Test [js-steering-behaviors]</title>
+    <title>Wander Visual Test [js-steering-behaviors]</title>
 
     <link rel="stylesheet" href="css/visual_test.css">
 
@@ -21,7 +21,7 @@
     <script src="js/Renderer.js"></script>
 </head>
 <body>
-<h1>Seek behavior visual test</h1>
+<h1>Wander behavior visual test</h1>
 <script>
 
     (function() {
@@ -40,8 +40,8 @@
 
         var renderer = new Renderer(
 
-            new SB.Vec2(30, 40),
-            {stroke: 'black', fill: 'lightgreen', line_width: 2}
+                new SB.Vec2(30, 40),
+                {stroke: 'black', fill: 'lightgreen', line_width: 2}
         );
 
         var agent = {
