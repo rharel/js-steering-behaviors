@@ -8,8 +8,8 @@
 
 var expect = require('chai').expect;
 
-var Vec2 = require('../../src/math/Vec2');
-var Character = require('../../src/core/Character');
+var Vec2 = require('../../../src/math/Vec2');
+var Character = require('../../../src/core/Character');
 
 
 describe ('Character', function() {
