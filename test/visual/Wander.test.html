@@ -48,12 +48,12 @@
 
             character: new SB.Character({
 
-                position: new SB.Vec2(0, 0),
+                position: new SB.Vec2(250, 250),
                 max_force: 200,
-                max_speed: 1000
+                max_speed: 100
             }),
 
-            behavior: new SB.Behavior.Seek(new SB.Vec2(250, 250), 300)
+            behavior: new SB.Behavior.Wander(0.25 * Math.PI, 0.1 * Math.PI, 200)
         };
 
         sim.agents.push(agent);
@@ -69,6 +69,11 @@
                 var dt = (current_time - last_time) / 1000;
 
                 sim.step(dt);
+
+                var p = agent.character.position;
+                
+                if (p.x < 0 || p.x > 500) { p.x = 500 - p.x;}
+                if (p.y < 0 || p.y > 500) { p.y = 500 - p.y; }
 
                 last_time = current_time;
             }

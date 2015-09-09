@@ -8,7 +8,8 @@
 
 var Behavior = {
 
-  Seek: require('./behaviors/Seek')
+  Seek: require('./behaviors/Seek'),
+  Wander: require('./behaviors/Wander')
 };
 
 var Character = require('./core/Character');
