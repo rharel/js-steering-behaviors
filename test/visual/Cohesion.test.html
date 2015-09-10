@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<!--
+/**
+ * @author Raoul Harel
+ * @license The MIT license (LICENSE.txt)
+ * @copyright 2015 Raoul Harel
+ * @url https://github.com/rharel/js-steering-behaviors
+ */
+-->
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Cohesion Visual Test [js-steering-behaviors]</title>
+
+    <link rel="stylesheet" href="css/visual_test.css">
+
+    <script src="../../dist/steering_behaviors.js"></script>
+
+    <script src="js/Player.js"></script>
+    <script src="js/Simulation.js"></script>
+    <script src="js/Renderer.js"></script>
+</head>
+<body>
+<h1>Cohesion behavior visual test</h1>
+<script>
+
+    (function() {
+
+        var WIDTH = 500, HEIGHT = 500;
+        var FPS = 30;
+
+        var canvas = document.createElement('canvas');
+        canvas.width = WIDTH;
+        canvas.height = HEIGHT;
+
+        var _2d = canvas.getContext('2d');
+
+        document.body.appendChild(canvas);
+
+        var characters = [];
+
+        var sim = new Simulation();
+
+        var renderer = new Renderer(
+
+                new SB.Vec2(30, 40),
+                {stroke: 'black', fill: 'lightgreen', line_width: 2}
+        );
+
+        var nearest_neighbour = new SB.Spatial.NaiveNearestNeighbour();
+
+        (function() {
+
+            var SPAWN = new SB.Vec2(WIDTH / 2, HEIGHT / 2);
+            var SPAWN_RADIUS = 150;
+            var N_CHARACTERS = 5;
+            var THETA = 2 * Math.PI / N_CHARACTERS;
+
+            var i, character;
+
+            for (i = 0; i < N_CHARACTERS; ++i) {
+
+                character = new SB.Character({
+
+                    position: new SB.Vec2(
+                            SPAWN.x + SPAWN_RADIUS * Math.cos(i * THETA),
+                            SPAWN.y + SPAWN_RADIUS * Math.sin(i * THETA)
+                    ),
+                    max_force: 10,
+                    max_speed: 50
+                });
+
+                characters.push(character);
+                nearest_neighbour.set(i, character.position);
+                sim.agents.push({
+
+                    character: character,
+                    behavior: new SB.Behavior.Cohesion(
+
+                            fixed_radius_neighbourhood, attraction_weight
+                    )
+                });
+            }
+
+            var ATTRACTION_RADIUS = Math.max(WIDTH, HEIGHT);
+
+            function fixed_radius_neighbourhood(position) {
+
+                return nearest_neighbour
+                        .query_fixed_radius(position, ATTRACTION_RADIUS)
+                        .map(function(i) { return characters[i]; });
+            }
+
+            function attraction_weight(distance) {
+
+                distance = distance || 10;
+                return distance * 100;
+            }
+        })();
+
+        var step = (function() {
+
+            var last_time = new Date();
+
+            return function() {
+
+                var current_time = new Date();
+                var dt = (current_time - last_time) / 1000;
+
+                var i = 0;
+                characters.forEach(function(character) {
+
+                    nearest_neighbour.set(i++, character.position);
+                });
+
+                sim.step(dt);
+
+                characters.forEach(function(character) {
+
+                    var p = character.position;
+
+                    if (p.x < 0 || p.x > WIDTH) { p.x = WIDTH - p.x; }
+                    if (p.y < 0 || p.y > HEIGHT) { p.y = HEIGHT - p.y; }
+                });
+
+                last_time = current_time;
+            }
+        })();
+
+        var world_player = new Player(FPS, step);
+
+        function render() {
+
+            renderer.render(_2d, characters);
+            requestAnimationFrame(render);
+        }
+
+        world_player.play();
+        render();
+    })();
+</script>
+</body>
+</html>

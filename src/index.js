@@ -9,6 +9,7 @@
 var Behavior = {
 
   Arrival: require('./behaviors/Arrival'),
+  Cohesion: require('./behaviors/Cohesion'),
   Pursuit: require('./behaviors/Pursuit'),
   Seek: require('./behaviors/Seek'),
   Separation: require('./behaviors/Separation'),
