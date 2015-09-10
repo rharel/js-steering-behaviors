@@ -25,7 +25,7 @@ Simulation.prototype = {
         var character = agent.character;
 
         character.net_force.set(0, 0);
-        character.apply_force(agent.behavior.drive(character));
+        character.apply_force(agent.behavior.drive(character, dt));
         character.step(dt)
       }
     );
