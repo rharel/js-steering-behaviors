@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<!--
+/**
+ * @author Raoul Harel
+ * @license The MIT license (LICENSE.txt)
+ * @copyright 2015 Raoul Harel
+ * @url https://github.com/rharel/js-steering-behaviors
+ */
+-->
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Steering Behaviors</title>
+
+    <script src="https://code.jquery.com/jquery-2.1.4.min.js"></script>
+
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css" rel="stylesheet" integrity="sha256-MfvZlkHCEqatNoGiOXveE8FIwMzZg4W85qfrfIFBfYc= sha512-dTfge/zgoMYpP7QbHy4gWMEGsbsdZeCXz7irItjcC3sPUFtf0kuFbDz/ixG7ArTxmDjLXDmezHubeNikyKGVyQ==" crossorigin="anonymous">
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js" integrity="sha256-Sk3nkD6mLTMOF0EOpNtsIry+s1CsaqQC1rVLTAy+0yc= sha512-K1qjQ+NcF2TYO/eI3M6v8EiNYZfA95pQumfvcVrTHtwQVDG+aHRqLi/ETn2uB+1JqwYqVG3LIvdm9lj6imS/pQ==" crossorigin="anonymous"></script>
+
+    <link rel="stylesheet" href="css/demo.css">
+
+    <script src="dist/steering_behaviors.js"></script>
+
+    <script src="js/Player.js"></script>
+    <script src="js/Simulation.js"></script>
+    <script src="js/Renderer.js"></script>
+
+    <script>
+
+        $(document).ready(function() {
+
+            var CANVAS_SIZE = 700;
+
+            var $canvas = $('#main-canvas');
+            $canvas[0].width = CANVAS_SIZE;
+            $canvas[0].height = CANVAS_SIZE;
+
+            var _2d = $canvas[0].getContext('2d');
+
+            var characters = [];
+
+            var simulation = new Simulation();
+
+            var renderer = new Renderer(
+
+                    new SB.Vec2(30, 40),
+                    {stroke: 'black', line_width: 2}
+            );
+
+            var behavior_color = {
+
+                arrival: 'lightblue',
+                pursuit: 'orange',
+                wander: 'lightgreen'
+            };
+
+            var MAX_FORCE = 200;
+
+            function spawn_wanderers() {
+
+                var N_WANDERERS = 5;
+
+                for (var i = 0; i < N_WANDERERS; ++i) {
+
+                    var character = new SB.Character({
+
+                        position: new SB.Vec2(CANVAS_SIZE / 2, CANVAS_SIZE / 2),
+                        orientation: 2 * Math.PI * Math.random(),
+                        max_force: MAX_FORCE,
+                        max_speed: 25
+                    });
+
+                    character.color = behavior_color.wander;
+
+                    characters.push(character);
+                    simulation.agents.push({
+
+                        character: character,
+                        behavior: new SB.Behavior.Wander(
+
+                            0.1 * Math.PI, 0.1 * Math.PI, 50
+                        )
+                    });
+                }
+            }
+
+            var PATROL_MARGIN = 50;
+            var patroller;
+
+            function spawn_patrol() {
+
+                var character = new SB.Character({
+
+                    position: new SB.Vec2(CANVAS_SIZE / 2, CANVAS_SIZE / 2),
+                    max_force: MAX_FORCE,
+                    max_speed: 100
+                });
+
+                character.color = behavior_color.arrival;
+
+                characters.push(character);
+
+                patroller = {
+
+                    character: character,
+                    behavior: new SB.Behavior.Arrival(character.position, 100, 50)
+                };
+
+                simulation.agents.push(patroller);
+            }
+
+            var step_patrol = (function() {
+
+                var EDGE = CANVAS_SIZE - PATROL_MARGIN;
+
+                var PATROL_POINTS = [
+
+                    {x: PATROL_MARGIN, y: PATROL_MARGIN},
+                    {x: EDGE, y: PATROL_MARGIN},
+
+                    {x: EDGE, y: EDGE},
+                    {x: PATROL_MARGIN, y: EDGE}
+                ];
+
+                var CURRENT_TARGET_INDEX = 0;
+                var CURRENT_TARGET = PATROL_POINTS[CURRENT_TARGET_INDEX];
+
+                return function() {
+
+                    if (patroller.character.position
+                       .distance(patroller.behavior.target) < 10) {
+
+                        ++ CURRENT_TARGET_INDEX;
+
+                        if (CURRENT_TARGET_INDEX === 4) {
+
+                            CURRENT_TARGET_INDEX = 0;
+                        }
+
+                        CURRENT_TARGET = PATROL_POINTS[CURRENT_TARGET_INDEX];
+
+                        patroller.behavior.target.set(
+                            CURRENT_TARGET.x, CURRENT_TARGET.y
+                        );
+                    }
+                }
+            })();
+
+            var step = (function() {
+
+                var last_time = new Date();
+
+                return function() {
+
+                    var current_time = new Date();
+                    var dt = (current_time - last_time) / 1000;
+
+                    step_patrol();
+                    simulation.step(dt);
+
+                    characters.forEach(function(character) {
+
+                        var p = character.position;
+
+                        if (p.x < 0) { p.x = CANVAS_SIZE; }
+                        else if (p.x > CANVAS_SIZE) { p.x = 0; }
+
+                        if (p.y < 0) { p.y = CANVAS_SIZE; }
+                        else if (p.y > CANVAS_SIZE) { p.y = 0; }
+                    });
+
+                    last_time = current_time;
+                }
+            })();
+
+            function render() {
+
+                renderer.render(_2d, characters);
+                requestAnimationFrame(render);
+            }
+
+            spawn_wanderers();
+            spawn_patrol();
+
+            var world_player = new Player(30, step);
+
+            world_player.play();
+            render();
+        });
+    </script>
+</head>
+<body>
+
+    <div class="container-fluid">
+
+        <div class="row">
+
+            <h1>Steering Behaviors</h1>
+
+            <a class="btn btn-success btn-lg"
+               id="view-on-github-btn"
+               href="https://github.com/rharel/js-steering-behaviors">
+
+                View on Github
+            </a>
+        </div>
+
+        <div class="row">
+
+            <canvas id="main-canvas">
+                Your browser does not support HTML5 canvas :(
+            </canvas>
+        </div>
+
+        <div class="row">
+
+
+        </div>
+    </div>
+</body>
+</html>
