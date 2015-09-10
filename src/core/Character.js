@@ -79,7 +79,11 @@ Character.prototype = {
     truncate(this._velocity, this._max_speed);
 
     this._position.add_(this._velocity.scale(dt));
-    this._orientation = RIGHT.signed_angle(this._velocity);
+
+    if (this._velocity.len2() > 0) {
+
+      this._orientation = RIGHT.signed_angle(this._velocity);
+    }
   },
 
   get mass() { return this._mass; },
