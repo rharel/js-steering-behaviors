@@ -22,6 +22,8 @@ Separation.prototype = {
 
   drive: function(character, dt) {
 
+    dt = dt || 1;
+
     var neighbours = this._nearest_neighbours(character.position);
 
     if (neighbours.length === 1) {
