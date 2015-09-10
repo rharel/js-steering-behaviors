@@ -8,6 +8,7 @@
 
 var Behavior = {
 
+  Arrival: require('./behaviors/Arrival'),
   Seek: require('./behaviors/Seek'),
   Wander: require('./behaviors/Wander')
 };

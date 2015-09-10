@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<!--
+/**
+ * @author Raoul Harel
+ * @license The MIT license (LICENSE.txt)
+ * @copyright 2015 Raoul Harel
+ * @url https://github.com/rharel/js-steering-behaviors
+ */
+-->
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Arrival Visual Test [js-steering-behaviors]</title>
+
+    <link rel="stylesheet" href="css/visual_test.css">
+
+    <script src="../../dist/steering_behaviors.js"></script>
+
+    <script src="js/Player.js"></script>
+    <script src="js/Simulation.js"></script>
+    <script src="js/Renderer.js"></script>
+</head>
+<body>
+<h1>Arrival behavior visual test</h1>
+<script>
+
+    (function() {
+
+        var EPSILON = 5;
+
+        var canvas = document.createElement('canvas');
+        canvas.width = 500;
+        canvas.height = 500;
+
+        var _2d = canvas.getContext('2d');
+
+        document.body.appendChild(canvas);
+
+        var characters = [];
+
+        var sim = new Simulation();
+
+        var renderer = new Renderer(
+
+                new SB.Vec2(30, 40),
+                {stroke: 'black', fill: 'lightgreen', line_width: 2}
+        );
+
+        var agent = {
+
+            character: new SB.Character({
+
+                position: new SB.Vec2(0, 0),
+                max_force: 1000,
+                max_speed: 100
+            }),
+
+            behavior: new SB.Behavior.Arrival(new SB.Vec2(250, 250), 300, 100)
+        };
+
+        sim.agents.push(agent);
+        characters.push(agent.character);
+
+        var step = (function() {
+
+            var last_time = new Date();
+
+            return function() {
+
+                var current_time = new Date();
+                var dt = (current_time - last_time) / 1000;
+
+                sim.step(dt);
+
+                var c = agent.character;
+                var b = agent.behavior;
+
+                if (c.velocity.len2() === 0) { c.position.set(0, 0); }
+
+                else if (c.position.distance(b.target) < EPSILON &&
+                    c.velocity.len() < EPSILON) {
+
+                    c.position.copy_(b.target);
+                    c.velocity.set(0, 0);
+                }
+
+                last_time = current_time;
+            }
+        })();
+
+        var world_player = new Player(30, step);
+
+        function render() {
+
+            renderer.render(_2d, characters);
+            requestAnimationFrame(render);
+        }
+
+        world_player.play();
+        render();
+    })();
+</script>
+</body>
+</html>
