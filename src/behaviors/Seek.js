@@ -18,7 +18,9 @@ Seek.prototype = {
 
   constructor: Seek,
 
-  drive: function(character) {
+  drive: function(character, dt) {
+
+    dt = dt || 1;
 
     var desired_velocity =
       this._target
@@ -28,7 +30,7 @@ Seek.prototype = {
 
     if (this._flee) { desired_velocity.scale_(-1); }
 
-    return desired_velocity.sub(character.velocity).scale_(character.mass);
+    return desired_velocity.sub(character.velocity).scale_(character.mass / dt);
   },
 
   get target() { return this._target; },

@@ -45,7 +45,7 @@ Arrival.prototype = {
 
     else { this._seek.desired_speed = this._desired_speed; }
 
-    return this._seek.drive(character).scale_(1 / dt);
+    return this._seek.drive(character, dt);
   },
 
   get target() { return this._seek.target;},

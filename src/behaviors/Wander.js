@@ -26,7 +26,9 @@ Wander.prototype = {
 
   constructor: Wander,
 
-  drive: function(character) {
+  drive: function(character, dt) {
+
+    dt = dt || 1;
 
     this._current_angle += random_in_range(
       -this._max_turn_rate,
@@ -40,7 +42,7 @@ Wander.prototype = {
 
     var force;
     force = RIGHT.rotate(character.orientation + this._current_angle);
-    force.scale_(this._speed);
+    force.scale_(this._speed * character.mass / dt);
 
     return force;
   },
