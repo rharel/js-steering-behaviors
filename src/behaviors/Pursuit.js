@@ -10,6 +10,24 @@ var Seek = require('./Seek');
 var Predictor = require('../utility/Predictor');
 
 
+/**
+ * Drives the character to pursue another character's position.
+ *
+ * @param {Character} target
+ *    Character to pursue.
+ *
+ * @param {number} desired_speed
+ *    Desired cruising speed.
+ *
+ * @param {boolean} evasion
+ *    If true, drives the character away from the target instead of towards.
+ *
+ * @param {callback} predictor
+ *    Callback used to predict the target's position in the future. It accepts a single argument
+ *    that is the target character.
+ *
+ * @constructor
+ */
 function Pursuit(target, desired_speed, evasion, predictor) {
 
   this._target = target;

@@ -14,6 +14,29 @@ var Vec2 = require('../math/Vec2');
 var EPSILON = 0.001;
 
 
+/**
+ * Drives a character towards a given target position.
+ *
+ * @details
+ *    Up until a given distance D from the target, this behavior is identical
+ *    to Seek. When the character is <= D units away from the target, it will start breaking
+ *    to a standstill.
+ *
+ * @param {Vec2} target
+ *    Target position.
+ *
+ * @param {number} desired_speed
+ *    Cruising speed when outside of breaking radius.
+ *
+ * @param {number} breaking_distance
+ *    Distance to the target from which to start breaking.
+ *
+ * @param {callback} [easing=Easing.linear]
+ *    Easing function [fn(a, b, t) => x] applied to the character's velocity
+ *    once inside the breaking radius.
+ *
+ * @constructor
+ */
 function Arrival(target, desired_speed, breaking_distance, easing) {
 
   this._desired_speed = desired_speed;

@@ -12,6 +12,20 @@ var Vec2 = require('../math/Vec2');
 var RIGHT = new Vec2(1, 0);
 
 
+/**
+ * Drives the character in random directions.
+ *
+ * @param {number} max_turn
+ *    Maximum turn angle (in radians).
+ *
+ * @param max_turn_rate
+ *    Maximum change in turn angle from update to update.
+ *
+ * @param speed
+ *    Desired cruising speed.
+ *
+ * @constructor
+ */
 function Wander(max_turn, max_turn_rate, speed) {
 
   this._max_turn = Math.abs(max_turn);

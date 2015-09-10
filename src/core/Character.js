@@ -25,6 +25,21 @@ var default_properties = {
   max_speed: 1
 };
 
+
+/**
+ * Physical point-mass character driven by forces.
+ *
+ * @param {object} properties
+ *    Initialization object with the following optional properties:
+ *      - mass {number}: Body mass.
+ *      - position {Vec2}: Initial position.
+ *      - orientation {number}: Initial orientation angle (in radians).
+ *      - velocity {Vec2}: Initial velocity.
+ *      - max_force {number}: Maximum thrust.
+ *      - max_speed {number}: Maximum speed.
+ *
+ * @constructor
+ */
 function Character(properties) {
 
   if (typeof properties === 'undefined') {
@@ -63,11 +78,28 @@ Character.prototype = {
 
   constructor: Character,
 
+  /**
+   * Adds given force to net_force.
+   *
+   * @param F
+   *    Force to apply.
+   */
   apply_force: function(F) {
 
     this._net_force.add_(F);
   },
 
+  /**
+   * Advances the character in time.
+   *
+   * @details
+   *    Uses forward Euler integration to compute new position, velocity. Thereby using
+   *    the current value of net_force. Also sets orientation to align with the
+   *    new velocity.
+   *
+   * @param dt
+   *    Time (in seconds) to advance.
+   */
   step: function(dt) {
 
     var acceleration;

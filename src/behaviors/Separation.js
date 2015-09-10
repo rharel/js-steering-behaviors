@@ -9,6 +9,21 @@
 var Vec2 = require('../math/Vec2');
 
 
+/**
+ * Drives a character away from the central position of nearby characters.
+ *
+ * @param {callback} nearest_neighbours
+ *    Callback that evaluates and returns an array of characters that are considered
+ *    'nearby'. The callback accepts a single Vec2 argument indicating the driven character's
+ *    current position.
+ *
+ * @param {callback} repulsion_weight
+ *    Callback that controls the scaling of the repulsive force. The callback accepts a single
+ *    scalar argument indicating the distance between the driven character and the central
+ *    repulsion point.
+ *
+ * @constructor
+ */
 function Separation(nearest_neighbours, repulsion_weight) {
 
   this._nearest_neighbours = nearest_neighbours;

@@ -6,6 +6,20 @@
  */
 
 
+/**
+ * Drives the character towards a target position.
+ *
+ * @param {Vec2} target
+ *    Destination.
+ *
+ * @param {number} desired_speed
+ *    Desired cruising speed.
+ *
+ * @param {boolean} flee
+ *    If true, drives the character away from the target instead of towards it.
+ *
+ * @constructor
+ */
 function Seek(target, desired_speed, flee) {
 
   this._target = target.clone();
