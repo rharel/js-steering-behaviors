@@ -28,7 +28,7 @@ Seek.prototype = {
 
     if (this._flee) { desired_velocity.scale_(-1); }
 
-    return desired_velocity.sub(character.velocity);
+    return desired_velocity.sub(character.velocity).scale_(character.mass);
   },
 
   get target() { return this._target; },
