@@ -3,8 +3,52 @@
     text-align: center;
 }
 
+.row + .row {
+
+    margin-top: 15px;
+}
+
+#legend {
+
+    vertical-align: middle;
+    font-size: 16pt;
+}
+
+.legend-key-value {
+
+    display: inline-block;
+    vertical-align: middle;
+}
+
+.legend-key-value + .legend-key-value {
+
+    margin-left: 15px;
+}
+
+.legend-key {
+
+    display: inline-block;
+
+    width: 15px;
+    height: 15px;
+}
+
+#legend-key-wander {
+
+    background-color: lightgreen;
+}
+
+#legend-key-arrival {
+
+    background-color: lightblue;
+}
+
+#legend-key-pursuit {
+
+    background-color: orange;
+}
+
 #main-canvas {
 
-    margin-top: 30px;
     border: 1px solid black;
 }
