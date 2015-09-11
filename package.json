@@ -1,6 +1,6 @@
 {
   "name": "js-steering-behaviors",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "description": "Reynolds' simple steering behaviors for character animation.",
   "directories": {
     "test": "test"
