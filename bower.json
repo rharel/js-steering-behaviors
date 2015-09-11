@@ -1,0 +1,34 @@
+{
+  "name": "js-steering-behaviors",
+  "version": "0.0.0",
+  "authors": [
+    "Raoul Harel <raoulhaa@gmail.com>"
+  ],
+  "description": "Reynolds' agent steering behaviors.",
+  "main": "dist/steering_behaviors.js",
+  "moduleType": [
+    "globals",
+    "node"
+  ],
+  "keywords": [
+    "steering",
+    "behavior",
+    "path",
+    "planning",
+    "character",
+    "animation",
+    "reynolds"
+  ],
+  "license": "MIT",
+  "homepage": "https://github.com/rharel/js-steering-behaviors",
+  "ignore": [
+    "node_modules",
+    "bower_components",
+    "test",
+    "src",
+    "doc",
+    ".gitignore",
+    "gruntfile.js",
+    "package.json"
+  ]
+}
