@@ -1,3 +1,4 @@
+[![Build Status](https://travis-ci.org/rharel/js-steering-behaviors.svg?branch=release%2F1.0.0)](https://travis-ci.org/rharel/js-steering-behaviors)
 [![Built with Grunt](https://cdn.gruntjs.com/builtwith.png)](http://gruntjs.com)
 
 ## What is this?
