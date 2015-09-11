@@ -56,6 +56,8 @@
 
             var MAX_FORCE = 200;
 
+            // wanderers walking randomly //
+
             function spawn_wanderers() {
 
                 var N_WANDERERS = 5;
@@ -83,6 +85,8 @@
                     });
                 }
             }
+
+            // one patroller going through checkpoints //
 
             var PATROL_MARGIN = 50;
             var patroller;
@@ -146,6 +150,34 @@
                 }
             })();
 
+            // one pursuer chasing the patroller //
+
+            function spawn_pursuer() {
+
+                var character = new SB.Character({
+
+                    position: new SB.Vec2(CANVAS_SIZE / 2, CANVAS_SIZE / 2),
+                    max_force: MAX_FORCE,
+                    max_speed: 50
+                });
+
+                character.color = behavior_color.pursuit;
+
+                characters.push(character);
+
+                var pursuer = {
+
+                    character: character,
+
+                    behavior: new SB.Behavior.Pursuit(
+
+                        patroller.character, 100, false, SB.Predictor.distance_based(character, 0.01)
+                    )
+                };
+
+                simulation.agents.push(pursuer);
+            }
+
             var step = (function() {
 
                 var last_time = new Date();
@@ -181,6 +213,7 @@
 
             spawn_wanderers();
             spawn_patrol();
+            spawn_pursuer();
 
             var world_player = new Player(30, step);
 
@@ -210,11 +243,6 @@
             <canvas id="main-canvas">
                 Your browser does not support HTML5 canvas :(
             </canvas>
-        </div>
-
-        <div class="row">
-
-
         </div>
     </div>
 </body>
