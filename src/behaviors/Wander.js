@@ -1,21 +1,17 @@
 /**
  * @author Raoul Harel
  * @license The MIT license (LICENSE.txt)
- * @copyright 2015 Raoul Harel
+ * @copyright 2017 Raoul Harel
  * @url https://github.com/rharel/js-steering-behaviors
  */
 
 
-var Vec2 = require('../math/Vec2');
-
-
-var RIGHT = new Vec2(1, 0);
-
+const Vector = require('../math/Vector2');
 
 /**
- * Drives the character in random directions.
+ * Drives the body in random directions.
  *
- * @param {number} max_turn
+ * @param max_turn_angle
  *    Maximum turn angle (in radians).
  *
  * @param max_turn_rate
@@ -26,55 +22,71 @@ var RIGHT = new Vec2(1, 0);
  *
  * @constructor
  */
-function Wander(max_turn, max_turn_rate, speed) {
+function Wander(max_turn_angle, max_turn_rate, speed)
+{
+	this._max_turn_angle = Math.abs(max_turn_angle);
+	this._max_turn_rate = Math.abs(max_turn_rate);
+	this._speed = speed;
 
-  this._max_turn = Math.abs(max_turn);
-  this._max_turn_rate = Math.abs(max_turn_rate);
-  this._speed = speed;
-
-  this._current_angle = 0;
+	this._current_angle = 0;
 }
+Wander.prototype =
+{
+	constructor: Wander,
 
+	/**
+	 * Drives the specified body for the specified amount of time.
+	 *
+	 * @param body
+	 * 		The body to drive.
+	 * @param dt
+	 * 		The drive's duration.
+	 * @returns
+	 * 		The desired force to be applied to the body.
+	 */
+	drive: function(body, dt = 1)
+	{
+		this._current_angle += random_in_range
+		(
+	    	-this._max_turn_rate,
+	    	 this._max_turn_rate
+		);
+		this._current_angle = Math.min
+		(
+			this._max_turn_angle,
+			Math.max(-this._max_turn_angle, this._current_angle)
+		);
 
-Wander.prototype = {
+		let force;
+		force = Vector.X.rotate(body.orientation + this._current_angle);
+		force.scale_(this._speed * body.mass / dt);
 
-  constructor: Wander,
+		return force;
+	},
 
-  drive: function(character, dt) {
+	get max_turn_angle() { return this._max_turn_angle; },
+	set max_turn_angle(value) { this._max_turn_angle = Math.abs(+value); },
 
-    dt = dt || 1;
+	get max_turn_rate() { return this._max_turn_rate; },
+	set max_turn_rate(value) { this._max_turn_rate = Math.abs(+value); },
 
-    this._current_angle += random_in_range(
-      -this._max_turn_rate,
-       this._max_turn_rate
-    );
-
-    this._current_angle = Math.min(
-      this._max_turn,
-      Math.max(-this._max_turn, this._current_angle)
-    );
-
-    var force;
-    force = RIGHT.rotate(character.orientation + this._current_angle);
-    force.scale_(this._speed * character.mass / dt);
-
-    return force;
-  },
-
-  get max_turn() { return this._max_turn; },
-  set max_turn(value) { this._max_turn = Math.abs(+value); },
-
-  get max_turn_rate() { return this._max_turn_rate; },
-  set max_turn_rate(value) { this._max_turn_rate = Math.abs(+value); },
-
-  get speed() { return this._speed; },
-  set speed(value) { this._speed = +value; }
+	get speed() { return this._speed; },
+	set speed(value) { this._speed = +value; }
 };
 
-
-function random_in_range(a, b) {
-
-  return a + (b - a) * Math.random();
+/**
+ * Generates a random number in the specified range.
+ *
+ * @param min
+ * 		The range's lower bound.
+ * @param max
+ * 		The range's upper bound.s
+ * @returns
+ * 		A random number in the specified range.
+ */
+function random_in_range(min, max)
+{
+	return min + (max - min) * Math.random();
 }
 
 

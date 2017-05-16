@@ -17,6 +17,7 @@ module.exports = function(grunt) {
     test_files: '<%= test_dir %>**/*.test.js',
 
     jshint: {
+      options: { esnext: true },
       all: [
         '<%= source_files %>',
         '<%= test_files %>'

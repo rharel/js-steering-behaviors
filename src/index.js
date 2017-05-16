@@ -1,49 +1,43 @@
 /**
  * @author Raoul Harel
  * @license The MIT license (LICENSE.txt)
- * @copyright 2015 Raoul Harel
+ * @copyright 2017 Raoul Harel
  * @url https://github.com/rharel/js-steering-behaviors
  */
 
 
-var Behavior = {
+const Behavior =
+{
+	Arrival: require('./behaviors/Arrival'),
+	Cohesion: require('./behaviors/Cohesion'),
+	Pursuit: require('./behaviors/Pursuit'),
+	Seek: require('./behaviors/Seek'),
+	Separation: require('./behaviors/Separation'),
+	Wander: require('./behaviors/Wander')
+};
+const Body = require('./core/Body');
+const Vector = require('./math/Vector2');
+const Spatial =
+{
+	NaiveNN: require('./spatial/NaiveNearestNeighbour')
+};
+const Easing = require('./utility/Easing');
+const Predictor = require('./utility/Predictor');
 
-  Arrival: require('./behaviors/Arrival'),
-  Cohesion: require('./behaviors/Cohesion'),
-  Pursuit: require('./behaviors/Pursuit'),
-  Seek: require('./behaviors/Seek'),
-  Separation: require('./behaviors/Separation'),
-  Wander: require('./behaviors/Wander')
+const SB =
+{
+	Behavior: Behavior,
+	Body: Body,
+	Vector: Vector,
+	Spatial: Spatial,
+	Easing: Easing,
+	Predictor: Predictor
 };
 
-var Character = require('./core/Character');
-var Vec2 = require('./math/Vec2');
-
-var Spatial = {
-
-  NaiveNearestNeighbour: require('./spatial/NaiveNearestNeighbour')
-};
-
-var Easing = require('./utility/Easing');
-var Predictor = require('./utility/Predictor');
-
-var SB = {
-
-  Behavior: Behavior,
-
-  Character: Character,
-
-  Vec2: Vec2,
-
-  Spatial: Spatial,
-
-  Easing: Easing,
-  Predictor: Predictor
-};
 
 module.exports = SB;
 
-if (typeof window !== 'undefined') {
-
-  window.SB = SB;
+if (window !== undefined)
+{
+	window.SB = SB;
 }

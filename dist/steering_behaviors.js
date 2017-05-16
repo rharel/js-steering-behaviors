@@ -2,225 +2,250 @@
 /**
  * @author Raoul Harel
  * @license The MIT license (LICENSE.txt)
- * @copyright 2015 Raoul Harel
+ * @copyright 2017 Raoul Harel
  * @url https://github.com/rharel/js-steering-behaviors
  */
 
 
-var Seek = require('./Seek');
-var Easing = require('../utility/Easing');
-var Vec2 = require('../math/Vec2');
+const Seek = require('./Seek');
+const Easing = require('../utility/Easing');
+const Vector = require('../math/Vector2');
 
-
-var EPSILON = 0.001;
+const EPSILON = 0.001;  // small number
 
 
 /**
- * Drives a character towards a given target position.
+ * Drives a body towards a given target position.
  *
  * @details
  *    Up until a given distance D from the target, this behavior is identical
- *    to Seek. When the character is <= D units away from the target, it will start breaking
- *    to a standstill.
- *
- * @param {Vec2} target
- *    Target position.
- *
- * @param {number} desired_speed
- *    Cruising speed when outside of breaking radius.
- *
- * @param {number} breaking_distance
- *    Distance to the target from which to start breaking.
- *
- * @param {callback} [easing=Easing.linear]
- *    Easing function [fn(a, b, t) => x] applied to the character's velocity
- *    once inside the breaking radius.
- *
+ *    to Seek. When the character is <= D units away from the target, it will
+ *    begin slowing down to a standstill.
+ * @param target
+ *    The target position.
+ * @param desired_speed
+ *    The cruising speed when outside of breaking radius.
+ * @param breaking_distance
+ *    The distance to the target from which to begin breaking.
+ * @param easing
+ *    The easing function applied to the character's velocity once inside the
+ *    breaking radius (default is Easing.linear).
  * @constructor
  */
-function Arrival(target, desired_speed, breaking_distance, easing) {
-
-  this._desired_speed = desired_speed;
-  this._seek = new Seek(target, desired_speed);
-  this._breaking_distance = breaking_distance;
-  this._ease = easing || Easing.linear;
+function Arrival(
+	target,
+	desired_speed,
+	breaking_distance,
+	easing = Easing.linear)
+{
+	this._desired_speed = desired_speed;
+	this._seeking_behavior = new Seek(target, desired_speed);
+	this._breaking_distance = breaking_distance;
+	this._ease = easing;
 }
+Arrival.prototype =
+{
+	constructor: Arrival,
 
+	/**
+	 * Drives the specified body for the specified amount of time.
+	 *
+	 * @param body
+	 * 		The body to drive.
+	 * @param dt
+	 * 		The drive's duration.
+	 * @returns
+	 * 		The desired force to be applied to the body.
+	 */
+	drive: function(body, dt = 1)
+	{
+		let distance_to_target =
+			body.position.distance_to(this._seeking_behavior.target);
 
-Arrival.prototype = {
+		if (distance_to_target < EPSILON)
+		{
+			distance_to_target = 0;
+		}
+		if (distance_to_target <= this._breaking_distance)
+		{
+			this._seeking_behavior.desired_speed = this._ease
+			(
+				0,
+				this._desired_speed,
+				distance_to_target / this._breaking_distance
+			);
+		}
+		else
+		{
+			this._seeking_behavior.desired_speed = this._desired_speed;
+		}
 
-  constructor: Arrival,
+		return this._seeking_behavior.drive(body, dt);
+	},
 
-  drive: function(character, dt) {
+	get target() { return this._seeking_behavior.target;},
 
-    dt = dt || 1;
+	get desired_speed() { return this._desired_speed; },
+	set desired_speed(value) { this._desired_speed = +value; },
 
-    var distance = character.position.distance(this._seek.target);
-
-    if (distance < EPSILON) { distance = 0; }
-
-    if (distance <= this._breaking_distance) {
-
-      this._seek.desired_speed = this._ease(
-
-        0, this._desired_speed, distance / this._breaking_distance
-      );
-    }
-
-    else { this._seek.desired_speed = this._desired_speed; }
-
-    return this._seek.drive(character, dt);
-  },
-
-  get target() { return this._seek.target;},
-
-  get desired_speed() { return this._desired_speed; },
-  set desired_speed(value) { this._desired_speed = +value; },
-
-  get breaking_distance() { return this._breaking_distance; },
-  set breaking_distance(value) { this._breaking_distance = +value; }
+	get breaking_distance() { return this._breaking_distance; },
+	set breaking_distance(value) { this._breaking_distance = +value; }
 };
 
 
 module.exports = Arrival;
 
-},{"../math/Vec2":9,"../utility/Easing":11,"./Seek":4}],2:[function(require,module,exports){
+},{"../math/Vector2":9,"../utility/Easing":11,"./Seek":4}],2:[function(require,module,exports){
 /**
  * @author Raoul Harel
  * @license The MIT license (LICENSE.txt)
- * @copyright 2015 Raoul Harel
+ * @copyright 2017 Raoul Harel
  * @url https://github.com/rharel/js-steering-behaviors
  */
 
 
-var Vec2 = require('../math/Vec2');
-
+const Vector = require('../math/Vector2');
 
 /**
- * Drives a character closer to the central position of nearby characters.
+ * Drives a body closer to the central position of nearby characters.
  *
- * @param {callback} nearest_neighbours
- *    Callback that evaluates and returns an array of characters that are considered
- *    'nearby'. The callback accepts a single Vec2 argument indicating the driven character's
- *    current position.
+ * @param get_nearest_neighbours
+ *    Callback that evaluates and returns an array of position of bodies that
+ *    are considered to be 'nearby'. The callback accepts a single Vector2
+ *    argument indicating the driven body's current position.
  *
- * @param {callback} attraction_weight
- *    Callback that controls the scaling of the attracting force. The callback accepts a single
- *    scalar argument indicating the distance between the driven character and the central
- *    attraction point.
+ * @param get_attraction_weight
+ *    Callback that controls the scaling of the attracting force. The callback
+ *    accepts a single scalar argument indicating the distance_to between the
+ *    driven body and the central attraction point.
  *
  * @constructor
  */
-function Cohesion(nearest_neighbours, attraction_weight) {
-
-  this._nearest_neighbours = nearest_neighbours;
-  this._attraction_weight = attraction_weight;
+function Cohesion(get_nearest_neighbours, get_attraction_weight)
+{
+	this._get_nearest_neighbours = get_nearest_neighbours;
+	this._get_attraction_weight = get_attraction_weight;
 }
+Cohesion.prototype =
+{
+	constructor: Cohesion,
 
+	/**
+	 * Drives the specified body for the specified amount of time.
+	 *
+	 * @param body
+	 * 		The body to drive.
+	 * @param dt
+	 * 		The drive's duration.
+	 * @returns
+	 * 		The desired force to be applied to the body.
+	 */
+	drive: function(body, dt = 1)
+	{
+		const average_position = new Vector(0, 0);
+		const neighbour_positions = this._get_nearest_neighbours(body.position);
 
-Cohesion.prototype = {
+		if (neighbour_positions.length === 1)
+		{
+			return body.velocity.scale(-body.mass / dt);
+		}
+		else
+		{
+			neighbour_positions.forEach(position =>
+			{
+				average_position.add_(position);
+			});
+			average_position.scale_(1 / neighbour_positions.length);
 
-  constructor: Cohesion,
+			const D = body.position.distance_to(average_position);
+			const W = this._get_attraction_weight(D);
 
-  drive: function(character, dt) {
-
-    dt = dt || 1;
-
-    var average_position = new Vec2(0, 0);
-
-    var neighbours = this._nearest_neighbours(character.position);
-
-    if (neighbours.length === 1) {
-
-      return character.velocity.scale(-character.mass / dt);
-    }
-
-    else {
-
-      neighbours.forEach(
-
-        function(neighbour) { average_position.add_(neighbour.position); }
-      );
-
-      average_position.scale_(1 / neighbours.length);
-
-      return average_position
-        .sub(character.position)
-        .scale_(this._attraction_weight(
-          character.position.distance(average_position)
-        ));
-    }
-  }
+			return (
+				average_position
+					.subtract(body.position)
+					.scale_(W)
+			);
+		}
+	}
 };
 
 
 module.exports = Cohesion;
 
-},{"../math/Vec2":9}],3:[function(require,module,exports){
+},{"../math/Vector2":9}],3:[function(require,module,exports){
 /**
  * @author Raoul Harel
  * @license The MIT license (LICENSE.txt)
- * @copyright 2015 Raoul Harel
+ * @copyright 2017 Raoul Harel
  * @url https://github.com/rharel/js-steering-behaviors
  */
 
 
-var Seek = require('./Seek');
-var Predictor = require('../utility/Predictor');
-
+const Seek = require('./Seek');
+const Predictor = require('../utility/Predictor');
 
 /**
- * Drives the character to pursue another character's position.
+ * Drives the body to pursue another body's position.
  *
- * @param {Character} target
- *    Character to pursue.
- *
- * @param {number} desired_speed
- *    Desired cruising speed.
- *
- * @param {boolean} evasion
- *    If true, drives the character away from the target instead of towards.
- *
- * @param {callback} predictor
- *    Callback used to predict the target's position in the future. It accepts a single argument
- *    that is the target character.
- *
+ * @param target
+ *    The body to pursue.
+ * @param desired_speed
+ *    The desired cruising speed.
+ * @param do_flee
+ *    If true, drives the body away from the target instead of towards it
+ *    (default is false).
+ * @param predictor
+ *    Callback used to predict the target's position in the future. It accepts a
+ *    single argument that is the target body (default is a static predictor
+ *    looking 0.1s into the future).
  * @constructor
  */
-function Pursuit(target, desired_speed, evasion, predictor) {
-
-  this._target = target;
-  this._predict_position = predictor || Predictor.constant(0.1);
-  this._seek = new Seek(target.position, desired_speed, evasion);
+function Pursuit(
+	target,
+	desired_speed,
+	do_flee = false,
+	predictor = Predictor.static(0.1))
+{
+	this._target = target;
+	this._predict_position = predictor;
+	this._seeking_behavior = new Seek(target.position, desired_speed, do_flee);
 }
+Pursuit.prototype =
+{
+	constructor: Pursuit,
 
+	/**
+	 * Drives the specified body for the specified amount of time.
+	 *
+	 * @param body
+	 * 		The body to drive.
+	 * @param dt
+	 * 		The drive's duration.
+	 * @returns
+	 * 		The desired force to be applied to the body.
+	 */
+	drive: function(body, dt = 1)
+	{
+		const target_future_position =
+			this._predict_position(this._target);
 
-Pursuit.prototype = {
+		this._seeking_behavior.target.assign(target_future_position);
 
-  constructor: Pursuit,
+		return this._seeking_behavior.drive(body, dt);
+	},
 
-  drive: function(character, dt) {
+	get target() { return this._target; },
+	set target(value) { this._target = value; },
 
-    dt = dt || 1;
+	get desired_speed() { return this._seeking_behavior.desired_speed; },
+	set desired_speed(value) { this._seeking_behavior.desired_speed = value; },
 
-    this._seek.target.copy_(
-      this._predict_position(this._target)
-    );
+	is_fleeing: function() { return this._seeking_behavior.is_fleeing(); },
+	flee: function() { this._seeking_behavior.flee(); },
+	seek: function() { this._seeking_behavior.seek(); },
 
-    return this._seek.drive(character, dt);
-  },
-
-  get target() { return this._target; },
-  set target(character) { this._target = character; },
-
-  get desired_speed() { return this._seek.desired_speed; },
-  set desired_speed(value) { this._seek.desired_speed = value; },
-
-  get evasion() { return this._seek.flee; },
-  set evasion(value) { this._seek.flee = value; },
-
-  get predictor() { return this._predict_position; },
-  set predictor(fn) { this._predict_position = fn; }
+	get predictor() { return this._predict_position; },
+	set predictor(value) { this._predict_position = value; }
 };
 
 
@@ -230,59 +255,71 @@ module.exports = Pursuit;
 /**
  * @author Raoul Harel
  * @license The MIT license (LICENSE.txt)
- * @copyright 2015 Raoul Harel
+ * @copyright 2017 Raoul Harel
  * @url https://github.com/rharel/js-steering-behaviors
  */
 
 
 /**
- * Drives the character towards a target position.
+ * Drives the body towards a target position.
  *
- * @param {Vec2} target
- *    Destination.
- *
- * @param {number} desired_speed
- *    Desired cruising speed.
- *
- * @param {boolean} flee
- *    If true, drives the character away from the target instead of towards it.
- *
+ * @param target
+ *    The destination.
+ * @param desired_speed
+ *    The desired cruising speed.
+ * @param do_flee
+ *    If true, drives the body away from the target instead of towards it
+ *    (default is false).
  * @constructor
  */
-function Seek(target, desired_speed, flee) {
-
-  this._target = target.clone();
-  this._desired_speed = desired_speed;
-  this._flee = flee || false;
+function Seek(target, desired_speed, do_flee = false)
+{
+	this._target = target.clone();
+	this._desired_speed = desired_speed;
+	this._do_flee = do_flee;
 }
+Seek.prototype =
+{
+	constructor: Seek,
 
+	/**
+	 * Drives the specified body for the specified amount of time.
+	 *
+	 * @param body
+	 * 		The body to drive.
+	 * @param dt
+	 * 		The drive's duration.
+	 * @returns
+	 * 		The desired force to be applied to the body.
+	 */
+	drive: function(body, dt = 1)
+	{
+		const desired_velocity =
+			this._target
+				.subtract(body.position)
+				.unit_()
+				.scale_(this._desired_speed);
 
-Seek.prototype = {
+		if (this._do_flee)
+		{
+			desired_velocity.negate_();
+		}
 
-  constructor: Seek,
+		return (
+			desired_velocity
+				.subtract(body.velocity)
+				.scale_(body.mass / dt)
+		);
+	},
 
-  drive: function(character, dt) {
+	get target() { return this._target; },
 
-    dt = dt || 1;
+	get desired_speed() { return this._desired_speed; },
+	set desired_speed(value) { this._desired_speed = +value; },
 
-    var desired_velocity =
-      this._target
-        .sub(character.position)
-        .unit_()
-        .scale_(this._desired_speed);
-
-    if (this._flee) { desired_velocity.scale_(-1); }
-
-    return desired_velocity.sub(character.velocity).scale_(character.mass / dt);
-  },
-
-  get target() { return this._target; },
-
-  get desired_speed() { return this._desired_speed; },
-  set desired_speed(value) { this._desired_speed = +value; },
-
-  get flee() { return this._flee; },
-  set flee(value) { this._flee = !!value; }
+	is_fleeing: function() { return this._do_flee; },
+	flee: function() { this._do_flee = true; },
+	seek: function() { this._do_flee = false; },
 };
 
 
@@ -292,97 +329,93 @@ module.exports = Seek;
 /**
  * @author Raoul Harel
  * @license The MIT license (LICENSE.txt)
- * @copyright 2015 Raoul Harel
+ * @copyright 2017 Raoul Harel
  * @url https://github.com/rharel/js-steering-behaviors
  */
 
 
-var Vec2 = require('../math/Vec2');
-
+const Vector = require('../math/Vector2');
 
 /**
- * Drives a character away from the central position of nearby characters.
+ * Drives a body away from the central position of nearby characters.
  *
- * @param {callback} nearest_neighbours
- *    Callback that evaluates and returns an array of characters that are considered
- *    'nearby'. The callback accepts a single Vec2 argument indicating the driven character's
- *    current position.
+ * @param get_nearest_neighbours
+ *    Callback that evaluates and returns an array of positions of bodies that
+ *    are considered to be 'nearby'. The callback accepts a single Vector2
+ *    argument indicating the driven body's current position.
  *
- * @param {callback} repulsion_weight
- *    Callback that controls the scaling of the repulsive force. The callback accepts a single
- *    scalar argument indicating the distance between the driven character and the central
- *    repulsion point.
+ * @param get_repulsion_weight
+ *    Callback that controls the scaling of the repulsive force. The callback
+ *    accepts a single scalar argument indicating the distance between the
+ *    driven body and the repulsion point.
  *
  * @constructor
  */
-function Separation(nearest_neighbours, repulsion_weight) {
-
-  this._nearest_neighbours = nearest_neighbours;
-  this._repulsion_weight = repulsion_weight;
+function Separation(get_nearest_neighbours, get_repulsion_weight)
+{
+	this._get_nearest_neighbours = get_nearest_neighbours;
+	this._get_repulsion_weight = get_repulsion_weight;
 }
+Separation.prototype =
+{
+	constructor: Separation,
 
+	/**
+	 * Drives the specified body for the specified amount of time.
+	 *
+	 * @param body
+	 * 		The body to drive.
+	 * @param dt
+	 * 		The drive's duration.
+	 * @returns
+	 * 		The desired force to be applied to the body.
+	 */
+	drive: function(body, dt = 1)
+	{
+		const neighbour_positions = this._get_nearest_neighbours(body.position);
 
-Separation.prototype = {
+		if (neighbour_positions.length === 1)
+		{
+			return body.velocity.scale(-body.mass / dt);
+		}
+		else
+		{
+			const total_force = new Vector(0, 0);
+			neighbour_positions.forEach(neighbour_position =>
+			{
+				const D = body.position.distance_to(neighbour_position);
+				const W = this._get_repulsion_weight(D);
+				const repulsive_force =
+					body.position
+						.subtract(neighbour_position)
+						.unit_()
+						.scale_(W);
 
-  constructor: Separation,
-
-  drive: function(character, dt) {
-
-    dt = dt || 1;
-
-    var neighbours = this._nearest_neighbours(character.position);
-
-    if (neighbours.length === 1) {
-
-      return character.velocity.scale(-character.mass / dt);
-    }
-
-    else {
-
-      var total_force = new Vec2(0, 0);
-
-      neighbours.forEach(
-
-        function(neighbour) {
-
-          var repulsive_force =
-            character.position
-              .sub(neighbour.position)
-              .unit_()
-              .scale_(this._repulsion_weight(character.position.distance(neighbour.position)));
-
-          total_force.add_(repulsive_force);
-        },
-        this
-      );
-
-      return total_force;
-    }
-  }
+				total_force.add_(repulsive_force);
+			});
+			return total_force;
+		}
+	}
 };
 
 
 module.exports = Separation;
 
-},{"../math/Vec2":9}],6:[function(require,module,exports){
+},{"../math/Vector2":9}],6:[function(require,module,exports){
 /**
  * @author Raoul Harel
  * @license The MIT license (LICENSE.txt)
- * @copyright 2015 Raoul Harel
+ * @copyright 2017 Raoul Harel
  * @url https://github.com/rharel/js-steering-behaviors
  */
 
 
-var Vec2 = require('../math/Vec2');
-
-
-var RIGHT = new Vec2(1, 0);
-
+const Vector = require('../math/Vector2');
 
 /**
- * Drives the character in random directions.
+ * Drives the body in random directions.
  *
- * @param {number} max_turn
+ * @param max_turn_angle
  *    Maximum turn angle (in radians).
  *
  * @param max_turn_rate
@@ -393,533 +426,670 @@ var RIGHT = new Vec2(1, 0);
  *
  * @constructor
  */
-function Wander(max_turn, max_turn_rate, speed) {
+function Wander(max_turn_angle, max_turn_rate, speed)
+{
+	this._max_turn_angle = Math.abs(max_turn_angle);
+	this._max_turn_rate = Math.abs(max_turn_rate);
+	this._speed = speed;
 
-  this._max_turn = Math.abs(max_turn);
-  this._max_turn_rate = Math.abs(max_turn_rate);
-  this._speed = speed;
-
-  this._current_angle = 0;
+	this._current_angle = 0;
 }
+Wander.prototype =
+{
+	constructor: Wander,
 
+	/**
+	 * Drives the specified body for the specified amount of time.
+	 *
+	 * @param body
+	 * 		The body to drive.
+	 * @param dt
+	 * 		The drive's duration.
+	 * @returns
+	 * 		The desired force to be applied to the body.
+	 */
+	drive: function(body, dt = 1)
+	{
+		this._current_angle += random_in_range
+		(
+	    	-this._max_turn_rate,
+	    	 this._max_turn_rate
+		);
+		this._current_angle = Math.min
+		(
+			this._max_turn_angle,
+			Math.max(-this._max_turn_angle, this._current_angle)
+		);
 
-Wander.prototype = {
+		let force;
+		force = Vector.X.rotate(body.orientation + this._current_angle);
+		force.scale_(this._speed * body.mass / dt);
 
-  constructor: Wander,
+		return force;
+	},
 
-  drive: function(character, dt) {
+	get max_turn_angle() { return this._max_turn_angle; },
+	set max_turn_angle(value) { this._max_turn_angle = Math.abs(+value); },
 
-    dt = dt || 1;
+	get max_turn_rate() { return this._max_turn_rate; },
+	set max_turn_rate(value) { this._max_turn_rate = Math.abs(+value); },
 
-    this._current_angle += random_in_range(
-      -this._max_turn_rate,
-       this._max_turn_rate
-    );
-
-    this._current_angle = Math.min(
-      this._max_turn,
-      Math.max(-this._max_turn, this._current_angle)
-    );
-
-    var force;
-    force = RIGHT.rotate(character.orientation + this._current_angle);
-    force.scale_(this._speed * character.mass / dt);
-
-    return force;
-  },
-
-  get max_turn() { return this._max_turn; },
-  set max_turn(value) { this._max_turn = Math.abs(+value); },
-
-  get max_turn_rate() { return this._max_turn_rate; },
-  set max_turn_rate(value) { this._max_turn_rate = Math.abs(+value); },
-
-  get speed() { return this._speed; },
-  set speed(value) { this._speed = +value; }
+	get speed() { return this._speed; },
+	set speed(value) { this._speed = +value; }
 };
 
-
-function random_in_range(a, b) {
-
-  return a + (b - a) * Math.random();
+/**
+ * Generates a random number in the specified range.
+ *
+ * @param min
+ * 		The range's lower bound.
+ * @param max
+ * 		The range's upper bound.s
+ * @returns
+ * 		A random number in the specified range.
+ */
+function random_in_range(min, max)
+{
+	return min + (max - min) * Math.random();
 }
 
 
 module.exports = Wander;
 
-},{"../math/Vec2":9}],7:[function(require,module,exports){
+},{"../math/Vector2":9}],7:[function(require,module,exports){
 /**
  * @author Raoul Harel
  * @license The MIT license (LICENSE.txt)
- * @copyright 2015 Raoul Harel
+ * @copyright 2017 Raoul Harel
  * @url https://github.com/rharel/js-steering-behaviors
  */
 
 
-var Vec2 = require('../math/Vec2');
-
-
-var RIGHT = new Vec2(1, 0);
-
-
-var default_properties = {
-
-  mass: 1,
-
-  position: new Vec2(0, 0),
-  orientation: 0,
-
-  velocity: new Vec2(0, 0),
-
-  max_force: 1,
-  max_speed: 1
-};
+const Vector = require('../math/Vector2');
 
 
 /**
- * Physical point-mass character driven by forces.
- *
- * @param {object} properties
- *    Initialization object with the following optional properties:
- *      - mass {number}: Body mass.
- *      - position {Vec2}: Initial position.
- *      - orientation {number}: Initial orientation angle (in radians).
- *      - velocity {Vec2}: Initial velocity.
- *      - max_force {number}: Maximum thrust.
- *      - max_speed {number}: Maximum speed.
+ * A body's default properties.
+ */
+const DEFAULT_PROPERTIES =
+{
+	mass: 1,
+
+	position: new Vector(0, 0),
+	orientation: 0,
+
+	velocity: new Vector(0, 0),
+
+	max_thrust: 1,
+	max_speed: 1
+};
+/**
+ * Represents a point-mass body capable of thrust.
  *
  * @constructor
+ * @param user_properties
+ *    An object describing the body's properties and initial state,
+ *    contains the following keys:
+ *      - mass {number}: Body mass.
+ *      - position {Vector2}: Initial position.
+ *      - orientation {number}: Initial orientation angle_to (in radians).
+ *      - velocity {Vector2}: Initial velocity.
+ *      - max_thrust {number}: Maximum thrust.
+ *      - max_speed {number}: Maximum speed.
  */
-function Character(properties) {
+function Body(user_properties = DEFAULT_PROPERTIES)
+{
+	const properties = Object.assign({}, DEFAULT_PROPERTIES, user_properties);
 
-  if (typeof properties === 'undefined') {
+	this._mass = properties.mass;
+	this._mass_inverse = 1 / this._mass;
 
-    properties = default_properties;
-  }
+	this._position = properties.position.clone();
+	this._orientation = properties.orientation;
 
-  else {
+	this._velocity = properties.velocity.clone();
 
-    for (var key in default_properties) {
+	this._max_thrust = properties.max_thrust;
+	this._max_speed = properties.max_speed;
 
-      if (default_properties.hasOwnProperty(key) &&
-         !properties.hasOwnProperty(key)) {
-
-        properties[key] = default_properties[key];
-      }
-    }
-  }
-
-  this._mass = properties.mass;
-  this._mass_inverse = 1 / this._mass;
-
-  this._position = properties.position.clone();
-  this._orientation = properties.orientation;
-
-  this._velocity = properties.velocity.clone();
-
-  this._max_force = properties.max_force;
-  this._max_speed = properties.max_speed;
-
-  this._net_force = new Vec2(0, 0);
+	this._net_force = new Vector(0, 0);
 }
+Body.prototype =
+{
+	constructor: Body,
 
+	/**
+	* Applies the specified force vector to the body.
+	*
+	* @param F
+	*    Force to apply.
+	*/
+	apply_force: function(F)
+	{
+		this._net_force.add_(F);
+	},
 
-Character.prototype = {
+	/**
+	* Advances the body in time.
+	*
+	* @details
+	*    Uses forward Euler integration to compute new position and velocity.
+	*    Also sets orientation to align with the new velocity's direction.
+	*
+	* @param dt
+	*    The time duration to advance.
+	*/
+	step: function(dt)
+	{
+		truncate(this._net_force, this._max_thrust);
+		const acceleration = this._net_force.scale(this._mass_inverse * dt);
 
-  constructor: Character,
+		this._velocity.add_(acceleration);
+		truncate(this._velocity, this._max_speed);
 
-  /**
-   * Adds given force to net_force.
-   *
-   * @param F
-   *    Force to apply.
-   */
-  apply_force: function(F) {
+		this._position.add_(this._velocity.scale(dt));
 
-    this._net_force.add_(F);
-  },
+		if (this._velocity.squared_norm() > 0)
+		{
+			this._orientation = Vector.X.signed_angle_to(this._velocity);
+		}
+	},
 
-  /**
-   * Advances the character in time.
-   *
-   * @details
-   *    Uses forward Euler integration to compute new position, velocity. Thereby using
-   *    the current value of net_force. Also sets orientation to align with the
-   *    new velocity.
-   *
-   * @param dt
-   *    Time (in seconds) to advance.
-   */
-  step: function(dt) {
+	get position() { return this._position; },
+	get orientation() { return this._orientation; },
+	get velocity() { return this._velocity; },
+	get net_force() { return this._net_force; },
 
-    var acceleration;
+	get mass() { return this._mass; },
+	set mass(value)
+	{
+		this._mass = +value;
+		this._mass_inverse = 1 / this._mass;
+	},
 
-    truncate(this._net_force, this._max_force);
-    acceleration = this._net_force.scale(this._mass_inverse * dt);
+	get max_thrust() { return this._max_thrust;},
+	set max_thrust(value) { this._max_thrust = +value; },
 
-    this._velocity.add_(acceleration);
-    truncate(this._velocity, this._max_speed);
-
-    this._position.add_(this._velocity.scale(dt));
-
-    if (this._velocity.len2() > 0) {
-
-      this._orientation = RIGHT.signed_angle(this._velocity);
-    }
-  },
-
-  get mass() { return this._mass; },
-  set mass(value) {
-
-    this._mass = +value;
-    this._mass_inverse = 1 / this._mass;
-  },
-
-  get position() { return this._position; },
-  get orientation() { return this._orientation; },
-
-  get velocity() { return this._velocity; },
-
-  get max_force() { return this._max_force;},
-  set max_force(value) { this._max_force = +value; },
-
-  get max_speed() { return this._max_speed; },
-  set max_speed(value) { this._max_speed = +value; },
-
-  get net_force() { return this._net_force; }
+	get max_speed() { return this._max_speed; },
+	set max_speed(value) { this._max_speed = +value; }
 };
 
+/**
+ * Performs magnitude truncation on a vector.
+ * @param v
+ * 		The vector to truncate.
+ * @param bound
+ * 		The bounding value.
+ * @returns
+ * 		The truncated vector.
+ */
+function truncate(v, bound)
+{
+	const norm = v.norm();
+	if (norm > bound)
+	{
+		v.scale_(bound / norm);
+	}
 
-function truncate(v, max) {
-
-  var len = v.len();
-  if (len > max) { v.scale_(max / len); }
-
-  return v;
+	return v;
 }
 
 
-module.exports = Character;
+module.exports = Body;
 
-},{"../math/Vec2":9}],8:[function(require,module,exports){
+},{"../math/Vector2":9}],8:[function(require,module,exports){
 /**
  * @author Raoul Harel
  * @license The MIT license (LICENSE.txt)
- * @copyright 2015 Raoul Harel
+ * @copyright 2017 Raoul Harel
  * @url https://github.com/rharel/js-steering-behaviors
  */
 
 
-var Behavior = {
+const Behavior =
+{
+	Arrival: require('./behaviors/Arrival'),
+	Cohesion: require('./behaviors/Cohesion'),
+	Pursuit: require('./behaviors/Pursuit'),
+	Seek: require('./behaviors/Seek'),
+	Separation: require('./behaviors/Separation'),
+	Wander: require('./behaviors/Wander')
+};
+const Body = require('./core/Body');
+const Vector = require('./math/Vector2');
+const Spatial =
+{
+	NaiveNN: require('./spatial/NaiveNearestNeighbour')
+};
+const Easing = require('./utility/Easing');
+const Predictor = require('./utility/Predictor');
 
-  Arrival: require('./behaviors/Arrival'),
-  Cohesion: require('./behaviors/Cohesion'),
-  Pursuit: require('./behaviors/Pursuit'),
-  Seek: require('./behaviors/Seek'),
-  Separation: require('./behaviors/Separation'),
-  Wander: require('./behaviors/Wander')
+const SB =
+{
+	Behavior: Behavior,
+	Body: Body,
+	Vector: Vector,
+	Spatial: Spatial,
+	Easing: Easing,
+	Predictor: Predictor
 };
 
-var Character = require('./core/Character');
-var Vec2 = require('./math/Vec2');
-
-var Spatial = {
-
-  NaiveNearestNeighbour: require('./spatial/NaiveNearestNeighbour')
-};
-
-var Easing = require('./utility/Easing');
-var Predictor = require('./utility/Predictor');
-
-var SB = {
-
-  Behavior: Behavior,
-
-  Character: Character,
-
-  Vec2: Vec2,
-
-  Spatial: Spatial,
-
-  Easing: Easing,
-  Predictor: Predictor
-};
 
 module.exports = SB;
 
-if (typeof window !== 'undefined') {
-
-  window.SB = SB;
+if (window !== undefined)
+{
+	window.SB = SB;
 }
 
-},{"./behaviors/Arrival":1,"./behaviors/Cohesion":2,"./behaviors/Pursuit":3,"./behaviors/Seek":4,"./behaviors/Separation":5,"./behaviors/Wander":6,"./core/Character":7,"./math/Vec2":9,"./spatial/NaiveNearestNeighbour":10,"./utility/Easing":11,"./utility/Predictor":12}],9:[function(require,module,exports){
+},{"./behaviors/Arrival":1,"./behaviors/Cohesion":2,"./behaviors/Pursuit":3,"./behaviors/Seek":4,"./behaviors/Separation":5,"./behaviors/Wander":6,"./core/Body":7,"./math/Vector2":9,"./spatial/NaiveNearestNeighbour":10,"./utility/Easing":11,"./utility/Predictor":12}],9:[function(require,module,exports){
 /**
  * @author Raoul Harel
  * @license The MIT license (LICENSE.txt)
- * @copyright 2015 Raoul Harel
+ * @copyright 2017 Raoul Harel
  * @url https://github.com/rharel/js-steering-behaviors
  */
 
 
 /**
- * 2D vector.
- *
- * @details
- *    Methods with suffix '_' (underscore) are in-place (mutate the current instance).
- *
- * @param x
- * @param y
+ * Represents a two-dimensional vector.
  *
  * @constructor
+ * @param x
+ * 		The vector's first coordinate.
+ * @param y
+ *		The vector's second coordinate.
+ * @note
+ *    Methods with suffix '_' (underscore) denote an in-place operation.
  */
-function Vec2(x, y) {
-
-  this._x = x;
-  this._y = y;
+function Vector2(x, y)
+{
+	this._x = x;
+	this._y = y;
 }
-
-Vec2.prototype = {
-
-  constructor: Vec2,
-
-  add: function(other) {
-
-    return new Vec2(
-      this._x + other._x,
-      this._y + other._y
-    );
-  },
-
-  add_: function(other) {
-
-    this._x += other._x;
-    this._y += other._y;
-
-    return this;
-  },
-
-  sub: function(other) {
-
-    return new Vec2(
-      this._x - other._x,
-      this._y - other._y
-    );
-  },
-
-  sub_: function(other) {
-
-    this._x -= other._x;
-    this._y -= other._y;
-
-    return this;
-  },
-
-  mul: function(other) {
-
-    return new Vec2(
-      this._x * other._x,
-      this._y * other._y
-    );
-  },
-
-  mul_: function(other) {
-
-    this._x *= other._x;
-    this._y *= other._y;
-
-    return this;
-  },
-
-  rotate: function(angle) {
-
-    var sin = Math.sin(angle);
-    var cos = Math.cos(angle);
-
-    return new Vec2(
-      this._x * cos - this._y * sin,
-      this._x * sin + this._y * cos
-    );
-  },
-
-  rotate_: function(angle) {
-
-    var sin = Math.sin(angle);
-    var cos = Math.cos(angle);
-
-    var x = this._x;
-    this._x = x * cos - this._y * sin;
-    this._y = x * sin + this._y * cos;
-
-    return this;
-  },
-
-  scale: function(scalar) {
-
-    return new Vec2(
-      this._x * scalar,
-      this._y * scalar
-    );
-  },
-
-  scale_: function(scalar) {
-
-    this._x *= scalar;
-    this._y *= scalar;
-
-    return this;
-  },
-
-  len2: function() {
-
-    return this.dot(this);
-  },
-
-  len: function() {
-
-    return Math.sqrt(this.len2());
-  },
-
-  distance2: function(other) {
-
-    return this.sub(other).len2();
-  },
-
-  distance: function(other) {
-
-    return Math.sqrt(this.distance2(other));
-  },
-
-  unit: function() {
-
-    var len = this.len();
-    len = len > 0 ? len : 1;
-
-    return this.scale(1 / len);
-  },
-
-  unit_: function() {
-
-    var len = this.len();
-    len = len > 0 ? len : 1;
-
-    return this.scale_(1 / len);
-  },
-
-  clone: function() {
-    return new Vec2(this._x, this._y);
-  },
-
-  copy_: function(other) {
-
-    this._x = other._x;
-    this._y = other._y;
-
-    return this;
-  },
-
-  dot: function(other) {
-
-    return this._x * other._x + this._y * other._y;
-  },
-
-  cross: function(other) {
-
-    return this._x * other._y - this._y * other._x;
-  },
-
-  angle: function(other) {
-
-    return Math.acos(this.dot(other) / (this.len() * other.len()));
-  },
-
-  signed_angle: function(other) {
-
-    return Math.atan2(this.cross(other), this.dot(other));
-  },
-
-  map: function(fn) {
-
-    return new Vec2(
-      fn(this._x),
-      fn(this._y)
-    );
-  },
-
-  map_: function(fn) {
-
-    this._x = fn(this._x);
-    this._y = fn(this._y);
-
-    return this;
-  },
-
-  set: function(x, y) {
-
-    this._x = x;
-    this._y = y;
-
-    return this;
-  },
-
-  get x() { return this._x; },
-  set x(value) { this._x = +value; },
-
-  get y() { return this._y; },
-  set y(value) { this._y = +value; },
-
-  toString: function() {
-
-    return 'Vec2(' + this._x + ', ' + this._y + ')';
-  }
+Vector2.prototype =
+{
+	constructor: Vector2,
+
+	/**
+	 * Performs negation.
+	 */
+	negate: function()
+	{
+		return this.scale(-1);
+	},
+	/**
+	 * Performs negation (in-place).
+	 */
+	negate_: function()
+	{
+		return this.scale_(-1);
+	},
+
+	/**
+	 * Performs element-wise addition.
+	 */
+	add: function(other)
+	{
+		return new Vector2
+		(
+			this._x + other._x,
+			this._y + other._y
+		);
+	},
+	/**
+	 * Performs element-wise addition (in-place).
+	 */
+	add_: function(other)
+	{
+		this._x += other._x;
+		this._y += other._y;
+
+		return this;
+	},
+
+	/**
+	 * Performs element-wise subtraction.
+	 */
+	subtract: function(other)
+	{
+		return new Vector2
+		(
+			this._x - other._x,
+			this._y - other._y
+		);
+	},
+	/**
+	 * Performs element-wise subtraction (in-place).
+	 */
+	subtract_: function(other)
+	{
+		this._x -= other._x;
+		this._y -= other._y;
+
+		return this;
+	},
+
+	/**
+	 * Performs element-wise multiplication.
+	 */
+	multiply: function(other)
+	{
+		return new Vector2
+		(
+	    	this._x * other._x,
+	  		this._y * other._y
+		);
+	},
+	/**
+	 * Performs element-wise multiplication (in-place).
+	 */
+	multiply_: function(other)
+	{
+		this._x *= other._x;
+		this._y *= other._y;
+
+		return this;
+	},
+
+	/**
+	 * Performs rotation by an angle_to.
+	 *
+	 * @param angle
+	 * 		Angle of rotation (in radians).
+	 */
+	rotate: function(angle)
+	{
+		const sin = Math.sin(angle);
+		const cos = Math.cos(angle);
+
+		return new Vector2
+		(
+	  		this._x * cos - this._y * sin,
+	  		this._x * sin + this._y * cos
+		);
+	},
+	/**
+	 * Performs rotation by an angle_to (in-place).
+	 *
+	 * @param angle
+	 * 		Angle of rotation (in radians).
+	 */
+	rotate_: function(angle)
+	{
+		const sin = Math.sin(angle);
+		const cos = Math.cos(angle);
+
+		const x = this._x;
+		this._x = x * cos - this._y * sin;
+		this._y = x * sin + this._y * cos;
+
+		return this;
+	},
+
+	/**
+	 * Performs scaling.
+	 */
+	scale: function(scalar)
+	{
+		return new Vector2
+		(
+			this._x * scalar,
+	  		this._y * scalar
+		);
+	},
+	/**
+	 * Performs scaling (in-place).
+	 */
+	scale_: function(scalar)
+	{
+		this._x *= scalar;
+		this._y *= scalar;
+
+		return this;
+	},
+
+	/**
+	 * Computes the squared norm.
+	 */
+	squared_norm: function()
+	{
+		return this.dot(this);
+	},
+	/**
+	 * Computes the norm.
+	 */
+	norm: function()
+	{
+		return Math.sqrt(this.squared_norm());
+	},
+
+	/**
+	 * Computes the squared distance between vectors.
+	 */
+	squared_distance_to: function(other)
+	{
+		return this.subtract(other).squared_norm();
+	},
+	/**
+	 * Computes the distance between vectors.
+	 */
+	distance_to: function(other)
+	{
+		return Math.sqrt(this.squared_distance_to(other));
+	},
+
+	/**
+	 * Performs normalization.
+	 */
+	unit: function()
+	{
+		const n = this.norm();
+		return (
+			n === 0 ?
+			this.clone() :
+			this.scale(1 / n)
+		);
+	},
+	/**
+	 * Performs normalization (in-place).
+	 */
+	unit_: function()
+	{
+		const n = this.norm();
+		return (
+			n === 0 ?
+			this :
+			this.scale_(1 / n)
+		);
+	},
+
+	/**
+	 * Produces a clone of this.
+	 */
+	clone: function()
+	{
+		return new Vector2(this._x, this._y);
+	},
+	/**
+	 * Assigns the values of another to this (in-place).
+	 */
+	assign: function(other)
+	{
+		this._x = other._x;
+		this._y = other._y;
+
+		return this;
+	},
+
+	/**
+	 * Performs the dot product.
+	 */
+	dot: function(other)
+	{
+		return this._x * other._x +
+			   this._y * other._y;
+	},
+	/**
+	 * Performs the cross product.
+	 */
+	cross: function(other)
+	{
+		return this._x * other._y -
+			   this._y * other._x;
+	},
+
+	/**
+	 * Computes the angle_to between two vectors.
+	 */
+	angle_to: function(other)
+	{
+		return Math.acos
+		(
+			this.dot(other) /
+			(this.norm() * other.norm())
+		);
+	},
+	/**
+	 * Computes the signed angle_to between two vectors.
+	 */
+	signed_angle_to: function(other)
+	{
+		return Math.atan2
+		(
+			this.cross(other),
+			this.dot(other)
+		);
+	},
+
+	/**
+	 * Performs element-wise mapping.
+	 *
+	 * @param f
+	 * 		The mapping function.
+	 */
+	map: function(f)
+	{
+		return new Vector2
+		(
+	    	f(this._x),
+			f(this._y)
+		);
+	},
+	/**
+	 * Performs element-wise mapping (in-place).
+	 *
+	 * @param f
+	 * 		The mapping function.
+	 */
+	map_: function(f)
+	{
+		this._x = f(this._x);
+		this._y = f(this._y);
+
+		return this;
+	},
+
+	/**
+	 * Sets coordinate values for this (in-place).
+	 */
+	set: function(x, y)
+	{
+		this._x = x;
+		this._y = y;
+
+		return this;
+	},
+
+	get x() { return this._x; },
+	set x(value) { this._x = +value; },
+
+	get y() { return this._y; },
+	set y(value) { this._y = +value; },
+
+	toString: function()
+	{
+		return `Vector2(${this._x}, ${this._y})`;
+	}
 };
 
+Vector2.ZERO = new Vector2(0, 0);
+Vector2.X = new Vector2(1, 0);
+Vector2.Y = new Vector2(0, 1);
 
-module.exports = Vec2;
+
+module.exports = Vector2;
 
 },{}],10:[function(require,module,exports){
 /**
  * @author Raoul Harel
  * @license The MIT license (LICENSE.txt)
- * @copyright 2015 Raoul Harel
+ * @copyright 2017 Raoul Harel
  * @url https://github.com/rharel/js-steering-behaviors
  */
 
 
-function NaiveNearestNeighbour() {
-
-  this._sites = {};  // id => point mapping
+/**
+ * A naive data structure for nearest-neighbour queries.
+ *
+ * @constructor
+ */
+function NaiveNearestNeighbour()
+{
+	this._sites = {};  // Mapping: id => position
 }
+NaiveNearestNeighbour.prototype =
+{
+	constructor: NaiveNearestNeighbour,
 
+	/**
+	 * Sets a site's position.
+	 *
+	 * @param id
+	 * 		The site's ID.
+	 * @param position
+	 * 		The site's position.
+	 */
+	set_site_position: function(id, position)
+	{
+		this._sites[id] = position;
+	},
+	/**
+	 * Removes a site from the index.
+	 *
+	 * @param id
+	 * 		The site's ID.
+	 */
+	remove_site: function(id)
+	{
+		delete this._sites[id];
+	},
 
-NaiveNearestNeighbour.prototype = {
+	/**
+	 * Compute all sites that are within the specified distance_to from a specified
+	 * query position.
+	 *
+	 * @param position
+	 * 		The query position.
+	 * @param radius
+	 * 		The radius of the query.
+	 * @returns
+	 * 		An array of site IDs.
+	 */
+	get_nearest_in_radius: function(position, radius)
+	{
+		let positions = [];
 
-  constructor: NaiveNearestNeighbour,
-
-  set: function(id, p) {
-
-    this._sites[id] = p;
-  },
-
-  remove: function(id) {
-
-    delete this._sites[id];
-  },
-
-  query_fixed_radius: function(query, radius) {
-
-    var neighbours = [];
-
-    for (var id in this._sites) {
-
-      if (this._sites.hasOwnProperty(id) &&
-          this._sites[id].distance(query) <= radius) {
-
-        neighbours.push(id);
-      }
-    }
-
-    return neighbours;
-  }
+		for (const id in this._sites)
+		{
+			if (this._sites.hasOwnProperty(id) &&
+			    this._sites[id].distance_to(position) <= radius)
+			{
+				positions.push(this._sites[id]);
+			}
+		}
+		return positions;
+	}
 };
 
 
@@ -929,53 +1099,110 @@ module.exports = NaiveNearestNeighbour;
 /**
  * @author Raoul Harel
  * @license The MIT license (LICENSE.txt)
- * @copyright 2015 Raoul Harel
+ * @copyright 2017 Raoul Harel
  * @url https://github.com/rharel/js-steering-behaviors
  */
 
 
-module.exports = {
-
-  linear: function(a, b, t) {
-
-    return a * (1 - t) + b * t;
-  }
+module.exports =
+{
+	/**
+	 * Computes the linear interpolation between two numbers at the specified
+	 * time.
+	 *
+	 * @param a
+	 * 		The first number.
+	 * @param b
+	 * 		The second number.
+	 * @param t
+	 * 		The time (0 <= t <= 1).
+	 * @returns
+	 * 		The interpolated value between the two numbers at the specified
+	 * 		time.
+	 */
+	linear: function(a, b, t)
+	{
+		return a * (1 - t) + b * t;
+	}
 };
 
 },{}],12:[function(require,module,exports){
 /**
  * @author Raoul Harel
  * @license The MIT license (LICENSE.txt)
- * @copyright 2015 Raoul Harel
+ * @copyright 2017 Raoul Harel
  * @url https://github.com/rharel/js-steering-behaviors
  */
 
 
-function extrapolate_linearly(position, velocity, dt) {
-
-  return position.add(velocity.scale(dt));
+/**
+ * Compute a body's future position given its current position and velocity.
+ *
+ * @param position
+ * 		The body's current position.
+ * @param velocity
+ * 		The body's static velocity.
+ * @param dt
+ * 		The amount of time to look into the future.
+ * @returns
+ * 		The body's position in the future.
+ */
+function compute_future_position(position, velocity, dt)
+{
+	return position.add(velocity.scale(dt));
 }
 
 
-module.exports = {
-
-  constant: function(dt) {
-
-    return function(character) {
-
-      return extrapolate_linearly(character.position, character.velocity, dt);
-    };
-  },
-
-  distance_based: function(pursuer, scalar) {
-
-    return function(character) {
-
-      var dt = pursuer.position.distance(character.position) * scalar;
-
-      return extrapolate_linearly(character.position, character.velocity, dt);
-    };
-  }
+module.exports =
+{
+	/**
+	 * Creates a predictor function that approximates a body's future position
+	 * based on its current position and velocity (assuming the velocity remains
+	 * static), and computing its position a specified amount of time
+	 * into the future.
+	 *
+	 * @param dt
+	 * 		The amount of time to look into the future.
+	 * @returns
+	 * 		A function: body => future position
+	 */
+	static: function(dt)
+	{
+		return function(body)
+		{
+			return compute_future_position
+			(
+				body.position,
+				body.velocity,
+				dt
+			);
+		};
+	},
+	/**
+	 * Creates a predictor function that approximates a body's future position
+	 * based on its current position and velocity (assuming the velocity remains
+	 * static), and computing its position a dynamic amount of time into the
+	 * future. The amount of time to look ahead is retrieved from a specified
+	 * function.
+	 *
+	 * @param get_dt
+	 * 		The function which yields the amount of time to look ahead:
+	 * 		() => number
+	 * @returns {Function}
+	 *		A function: body => future position
+	 */
+	dynamic: function(get_dt)
+	{
+		return function(body)
+		{
+			return compute_future_position
+			(
+				body.position,
+				body.velocity,
+				get_dt()
+			);
+		};
+	}
 };
 
 },{}]},{},[8]);
