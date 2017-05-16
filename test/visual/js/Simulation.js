@@ -1,35 +1,54 @@
 /**
  * @author Raoul Harel
  * @license The MIT license (LICENSE.txt)
- * @copyright 2015 Raoul Harel
+ * @copyright 2017 Raoul Harel
  * @url https://github.com/rharel/js-steering-behaviors
  */
 
 
-function Simulation() {
-
-  this._agents = [];
+function Simulation(world_width, world_height)
+{
+	this._world_size = new SB.Vector(world_width, world_height);
+	this._agents = [];
 }
+Simulation.prototype =
+{
+	constructor: Simulation,
 
+	step: function(dt)
+	{
+		this._agents.forEach(agent =>
+		{
+			const body = agent.body;
+			const behavior = agent.behavior;
 
-Simulation.prototype = {
+			body.net_force.set(0, 0);
+			body.apply_force(behavior.drive(body, dt));
+			body.step(dt);
 
-  constructor: Simulation,
+			this._enforce_world_bounds(body.position);
+			this._discard_small_values(body.velocity);
+		});
+	},
+	_enforce_world_bounds: function(position)
+	{
+		const p = position;
+		if (p.x < 0 || p.x > this._world_size.x)
+		{
+			p.x = this._world_size.x - p.x;
+		}
+		if (p.y < 0 || p.y > this._world_size.y)
+		{
+			p.y = this._world_size.y - p.y;
+		}
+	},
+	_discard_small_values: function(v)
+	{
+		v.map_(x => Math.abs(x) < Simulation.EPSILON ? 0 : x);
+	},
 
-  step: function(dt) {
-
-    this._agents.forEach(
-
-      function(agent) {
-
-        var character = agent.character;
-
-        character.net_force.set(0, 0);
-        character.apply_force(agent.behavior.drive(character, dt));
-        character.step(dt)
-      }
-    );
-  },
-
-  get agents() { return this._agents; }
+	get world_size() { return this._world_size; },
+	get agents() { return this._agents; }
 };
+
+Simulation.EPSILON = 0.001;

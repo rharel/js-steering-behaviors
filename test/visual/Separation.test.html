@@ -16,7 +16,6 @@
 
     <script src="../../dist/steering_behaviors.js"></script>
 
-    <script src="js/Player.js"></script>
     <script src="js/Simulation.js"></script>
     <script src="js/Renderer.js"></script>
 </head>
@@ -26,117 +25,73 @@
 
     (function() {
 
-        var WIDTH = 500, HEIGHT = 500;
-        var FPS = 30;
+		const canvas = document.createElement('canvas');
+		const _2d = canvas.getContext('2d');
+		canvas.width = 500;
+		canvas.height = 500;
+		document.body.appendChild(canvas);
 
-        var canvas = document.createElement('canvas');
-        canvas.width = WIDTH;
-        canvas.height = HEIGHT;
+		const simulation = new Simulation(canvas.width, canvas.height);
+		const renderer = new Renderer
+		(
+			{
+				size: new SB.Vector(30, 40),
+				stroke: 'black',
+				fill: 'lightgreen',
+				line_width: 2
+			}
+		);
+		const NaiveNN = new SB.Spatial.NaiveNN();
+		const get_NN = position => NaiveNN.get_nearest_in_radius(position, 200);
+		const get_repulsion_weight = distance => 5;
+        const separation_behavior =
+            new SB.Behavior.Separation(get_NN, get_repulsion_weight);
 
-        var _2d = canvas.getContext('2d');
+		simulation.agents.push(
+        {
+            body: new SB.Body
+            ({
+                position: new SB.Vector(245, 245),
+                max_thrust: 100,
+                max_speed: 200
+            }),
+            behavior: separation_behavior,
+            style: { fill: 'lightgreen' }
+        });
+		simulation.agents.push(
+        {
+            body: new SB.Body
+            ({
+                position: new SB.Vector(255, 255),
+                max_thrust: 100,
+                max_speed: 200
+            }),
+            behavior: separation_behavior,
+            style: { fill: 'red' }
+        });
+		simulation.agents.forEach((agent, i) =>
+		{
+			NaiveNN.set_site_position(i, agent.body.position);
+		});
 
-        document.body.appendChild(canvas);
+		let t_before = new Date();
+		function main()
+		{
+			const t_now = new Date();
+			const dt = (t_now - t_before) / 1000;
+			t_before = t_now;
 
-        var characters = [];
 
-        var sim = new Simulation();
+			simulation.step(dt === 0 ? 1 : dt);
 
-        var renderer = new Renderer(
-
-                new SB.Vec2(30, 40),
-                {stroke: 'black', fill: 'lightgreen', line_width: 2}
-        );
-
-        var nearest_neighbour = new SB.Spatial.NaiveNearestNeighbour();
-
-        (function() {
-
-            var SPAWN = new SB.Vec2(WIDTH / 2, HEIGHT / 2);
-            var SPAWN_RADIUS = 10;
-            var N_CHARACTERS = 5;
-            var THETA = 2 * Math.PI / N_CHARACTERS;
-
-            var i, character;
-
-            for (i = 0; i < N_CHARACTERS; ++i) {
-
-                character = new SB.Character({
-
-                    position: new SB.Vec2(
-                        SPAWN.x + SPAWN_RADIUS * Math.cos(i * THETA),
-                        SPAWN.y + SPAWN_RADIUS * Math.sin(i * THETA)
-                    ),
-                    max_force: 10,
-                    max_speed: 50
-                });
-
-                characters.push(character);
-                nearest_neighbour.set(i, character.position);
-                sim.agents.push({
-
-                    character: character,
-                    behavior: new SB.Behavior.Separation(
-
-                        fixed_radius_neighbourhood, repulsion_weight
-                    )
-                });
-            }
-
-            var SEPARATION_RADIUS = 100;
-
-            function fixed_radius_neighbourhood(position) {
-
-                return nearest_neighbour
-                    .query_fixed_radius(position, SEPARATION_RADIUS)
-                    .map(function(i) { return characters[i]; });
-            }
-
-            function repulsion_weight(distance) {
-
-                distance = distance || 10;
-                return 1000 / distance;
-            }
-        })();
-
-        var step = (function() {
-
-            var last_time = new Date();
-
-            return function() {
-
-                var current_time = new Date();
-                var dt = (current_time - last_time) / 1000;
-
-                var i = 0;
-                characters.forEach(function(character) {
-
-                    nearest_neighbour.set(i++, character.position);
-                });
-
-                sim.step(dt);
-
-                characters.forEach(function(character) {
-
-                    var p = character.position;
-
-                    if (p.x < 0 || p.x > WIDTH) { p.x = WIDTH - p.x; }
-                    if (p.y < 0 || p.y > HEIGHT) { p.y = HEIGHT - p.y; }
-                });
-
-                last_time = current_time;
-            }
-        })();
-
-        var world_player = new Player(FPS, step);
-
-        function render() {
-
-            renderer.render(_2d, characters);
-            requestAnimationFrame(render);
-        }
-
-        world_player.play();
-        render();
+			renderer.render_background(_2d);
+			simulation.agents.forEach(agent =>
+			{
+				renderer.render_body(_2d, agent.body, agent.style);
+			});
+			requestAnimationFrame(main);
+		}
+		main();
     })();
 </script>
 </body>
