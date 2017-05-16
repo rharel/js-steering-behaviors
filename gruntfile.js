@@ -47,20 +47,11 @@ module.exports = function(grunt) {
         dest: '<%= dist_dir %>/steering_behaviors.js'
       }
     },
-
-    uglify: {
-      release: {
-        files: {
-          '<%= dist_dir %>/steering_behaviors.min.js': ['<%= dist_dir %>/steering_behaviors.js']
-        }
-      }
-    }
   };
 
   grunt.registerTask('build', [
     'clean:release',
-    'browserify:release',
-    'uglify:release'
+    'browserify:release'
   ]);
   grunt.registerTask('test', ['mochacli:all']);
   grunt.registerTask('dev', [
