@@ -12,7 +12,7 @@ This is an implementation of some of the steering behaviors mentioned in the ori
 Install via bower: `bower install rharel/js-steering-behaviors`
 
 The `dist/` directory contains the library file (`steering_behaviors.js`).
-Include in the browser using `<script src="path/to/steering_behaviors.min.js"></script>`
+Include in the browser using `<script src="path/to/steering_behaviors.js"></script>`
 
 ## Documentation
 
