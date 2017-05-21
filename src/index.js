@@ -8,14 +8,15 @@
 
 const Behavior =
 {
-	Arrival: require('./behaviors/Arrival'),
-	Cohesion: require('./behaviors/Cohesion'),
-	Pursuit: require('./behaviors/Pursuit'),
+	Arrive: require('./behaviors/Arrive'),
+	Pursue: require('./behaviors/Pursue'),
 	Seek: require('./behaviors/Seek'),
-	Separation: require('./behaviors/Separation'),
-	Wander: require('./behaviors/Wander')
+	Separate: require('./behaviors/Separate'),
+	Wander: require('./behaviors/Wander'),
+	Patrol: require('./behaviors/Patrol'),
+	Align: require('./behaviors/Align')
 };
-const Body = require('./core/Body');
+const Vehicle = require('./core/Vehicle');
 const Vector = require('./math/Vector2');
 const Spatial =
 {
@@ -27,7 +28,7 @@ const Predictor = require('./utility/Predictor');
 const SB =
 {
 	Behavior: Behavior,
-	Body: Body,
+	Vehicle: Vehicle,
 	Vector: Vector,
 	Spatial: Spatial,
 	Easing: Easing,

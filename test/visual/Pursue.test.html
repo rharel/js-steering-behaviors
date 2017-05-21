@@ -10,7 +10,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Arrival Visual Test [js-steering-behaviors]</title>
+    <title>Pursue Visual Test [js-steering-behaviors]</title>
 
     <link rel="stylesheet" href="css/visual_test.css">
 
@@ -20,7 +20,7 @@
     <script src="js/Renderer.js"></script>
 </head>
 <body>
-<h1>Arrival behavior visual test</h1>
+<h1>Pursue behavior visual test</h1>
 <script>
 
     (function() {
@@ -35,28 +35,37 @@
 		const renderer = new Renderer
 		(
 			{
-				size: new SB.Vector(30, 40),
+                size: new SB.Vector(30, 40),
 				stroke: 'black',
 				fill: 'lightgreen',
 				line_width: 2
 			}
 		);
-		const agent =
+		simulation.agents.push(
         {
-            body: new SB.Body
+            vehicle: new SB.Vehicle
             ({
                 position: new SB.Vector(50, 50),
-                max_thrust: 200,
+                max_thrust: 100,
                 max_speed: 100
             }),
-            behavior: new SB.Behavior.Arrival
+            behavior: new SB.Behavior.Wander(0.1 * Math.PI, 0.001 * Math.PI, 100)
+        });
+		simulation.agents.push(
+        {
+            vehicle: new SB.Vehicle
+            ({
+                position: new SB.Vector(250, 250),
+                max_thrust: 200,
+                max_speed: 75
+            }),
+            behavior: SB.Behavior.Pursue.vehicle
             (
-                new SB.Vector(450, 450),
-                100,
-                100
-            )
-        };
-		simulation.agents.push(agent);
+            	simulation.agents[0].vehicle, 75,
+                SB.Predictor.static(1)
+            ),
+            style: { fill: 'darkorange' }
+        });
 
 		let t_before = new Date();
 		function main()
@@ -65,14 +74,14 @@
 			const dt = (t_now - t_before) / 1000;
 			t_before = t_now;
 
-			simulation.step(dt === 0 ? 0.1 : dt);
+			simulation.step(dt === 0 ? 0.001 : dt);
 
 			renderer.render_background(_2d);
 			simulation.agents.forEach(agent =>
-			{
-				renderer.render_body(_2d, agent.body, agent.style);
-			});
-			requestAnimationFrame(main);
+            {
+            	renderer.render_vehicle(_2d, agent.vehicle, agent.style);
+            });
+			setTimeout(() => requestAnimationFrame(main), 15);
 		}
 		main();
     })();

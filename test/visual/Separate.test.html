@@ -10,7 +10,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Pursuit Visual Test [js-steering-behaviors]</title>
+    <title>Separate Visual Test [js-steering-behaviors]</title>
 
     <link rel="stylesheet" href="css/visual_test.css">
 
@@ -20,7 +20,7 @@
     <script src="js/Renderer.js"></script>
 </head>
 <body>
-<h1>Pursuit behavior visual test</h1>
+<h1>Separate behavior visual test</h1>
 <script>
 
     (function() {
@@ -35,42 +35,44 @@
 		const renderer = new Renderer
 		(
 			{
-                size: new SB.Vector(30, 40),
+				size: new SB.Vector(30, 40),
 				stroke: 'black',
 				fill: 'lightgreen',
 				line_width: 2
 			}
 		);
+		const NaiveNN = new SB.Spatial.NaiveNN();
+		const get_NN = position => NaiveNN
+            .get_nearest_in_radius(position, 200)
+            .filter(item => item.position !== position);
+        const separation_behavior = new SB.Behavior.Separate(get_NN, 200);
+
 		simulation.agents.push(
         {
-            body: new SB.Body
+            vehicle: new SB.Vehicle
             ({
-                position: new SB.Vector(50, 50),
-                max_thrust: 200,
-                max_speed: 100
+                position: new SB.Vector(245, 245),
+                max_thrust: 100,
+                max_speed: 200
             }),
-            behavior: new SB.Behavior.Wander
-            (
-                0.25 * Math.PI,
-                0.1 * Math.PI,
-                200
-            )
+            behavior: separation_behavior,
+            style: { fill: 'lightgreen' }
         });
 		simulation.agents.push(
         {
-            body: new SB.Body
+            vehicle: new SB.Vehicle
             ({
-                position: new SB.Vector(250, 250),
-                max_thrust: 200,
-                max_speed: 75
+                position: new SB.Vector(255, 255),
+                max_thrust: 100,
+                max_speed: 200
             }),
-            behavior: new SB.Behavior.Pursuit
-            (
-                simulation.agents[0].body,
-                75
-            ),
-            style: { fill: 'darkorange' }
+            behavior: separation_behavior,
+            style: { fill: 'red' }
         });
+		simulation.agents.forEach((agent, i) =>
+		{
+			NaiveNN.set_site_position(i, agent.vehicle.position);
+		});
 
 		let t_before = new Date();
 		function main()
@@ -79,14 +81,14 @@
 			const dt = (t_now - t_before) / 1000;
 			t_before = t_now;
 
-			simulation.step(dt === 0 ? 1 : dt);
+			simulation.step(dt === 0 ? 0.001 : dt);
 
 			renderer.render_background(_2d);
 			simulation.agents.forEach(agent =>
-            {
-            	renderer.render_body(_2d, agent.body, agent.style);
-            });
-			requestAnimationFrame(main);
+			{
+				renderer.render_vehicle(_2d, agent.vehicle, agent.style);
+			});
+			setTimeout(() => requestAnimationFrame(main), 15);
 		}
 		main();
     })();

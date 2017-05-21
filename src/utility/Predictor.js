@@ -7,16 +7,16 @@
 
 
 /**
- * Compute a body's future position given its current position and velocity.
+ * Compute a vehicle's future position given its current position and velocity.
  *
  * @param position
- * 		The body's current position.
+ * 		The vehicle's current position.
  * @param velocity
- * 		The body's static velocity.
+ * 		The vehicle's static velocity.
  * @param dt
  * 		The amount of time to look into the future.
  * @returns
- * 		The body's position in the future.
+ * 		The vehicle's position in the future.
  */
 function compute_future_position(position, velocity, dt)
 {
@@ -27,7 +27,7 @@ function compute_future_position(position, velocity, dt)
 module.exports =
 {
 	/**
-	 * Creates a predictor function that approximates a body's future position
+	 * Creates a predictor function that approximates a vehicle's future position
 	 * based on its current position and velocity (assuming the velocity remains
 	 * static), and computing its position a specified amount of time
 	 * into the future.
@@ -35,22 +35,22 @@ module.exports =
 	 * @param dt
 	 * 		The amount of time to look into the future.
 	 * @returns
-	 * 		A function: body => future position
+	 * 		A function: vehicle => future position
 	 */
 	static: function(dt)
 	{
-		return function(body)
+		return function(vehicle)
 		{
 			return compute_future_position
 			(
-				body.position,
-				body.velocity,
+				vehicle.position,
+				vehicle.velocity,
 				dt
 			);
 		};
 	},
 	/**
-	 * Creates a predictor function that approximates a body's future position
+	 * Creates a predictor function that approximates a vehicle's future position
 	 * based on its current position and velocity (assuming the velocity remains
 	 * static), and computing its position a dynamic amount of time into the
 	 * future. The amount of time to look ahead is retrieved from a specified
@@ -60,16 +60,16 @@ module.exports =
 	 * 		The function which yields the amount of time to look ahead:
 	 * 		() => number
 	 * @returns {Function}
-	 *		A function: body => future position
+	 *		A function: vehicle => future position
 	 */
 	dynamic: function(get_dt)
 	{
-		return function(body)
+		return function(vehicle)
 		{
 			return compute_future_position
 			(
-				body.position,
-				body.velocity,
+				vehicle.position,
+				vehicle.velocity,
 				get_dt()
 			);
 		};

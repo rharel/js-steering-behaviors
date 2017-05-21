@@ -7,15 +7,85 @@
  */
 
 
+const Vector = require('../math/Vector2');
+
+/**
+ * Drives a vehicle in alignment with nearby vehicles.
+ *
+ * @param get_neighbourhood_sites
+ *    Callback that evaluates and returns an array of velocities of vehicles that
+ *    are considered to be 'nearby'. The callback accepts a single Vector2
+ *    argument indicating the driven vehicle's current position.
+ * @constructor
+ */
+function Align(get_neighbourhood_sites)
+{
+	this._get_neighbourhood_sites = get_neighbourhood_sites;
+	this._seek = new SB.Behavior.Seek(new Vector(0, 0), 0);
+}
+Align.prototype =
+{
+	constructor: Align,
+
+	/**
+	 * Drives the specified vehicle for the specified amount of time.
+	 *
+	 * @param vehicle
+	 * 		The vehicle to drive.
+	 * @param dt
+	 * 		The drive's duration.
+	 * @returns
+	 * 		The desired force to be applied to the vehicle.
+	 */
+	drive: function(vehicle, dt = 1)
+	{
+		const sites = this._get_neighbourhood_sites(vehicle.position);
+
+		if (sites.length === 0)
+		{
+			return vehicle.velocity.scale(-vehicle.mass / dt);
+		}
+		else
+		{
+			const average_velocity = new Vector(0, 0);
+			sites.forEach(site =>
+			{
+				average_velocity.add_(site.data.velocity);
+			});
+			average_velocity.scale(1 / sites.length);
+
+			this._seek.target.assign(vehicle.position.add(average_velocity));
+			this._seek.desired_speed = average_velocity.norm();
+			return this._seek.drive(vehicle, dt);
+		}
+	},
+
+	get target() { return this._seek.target;},
+
+	get repulsion_speed() { return this._seek.desired_speed; },
+	set repulsion_speed(value) { this._seek.desired_speed = +value; }
+};
+
+
+module.exports = Align;
+
+},{"../math/Vector2":10}],2:[function(require,module,exports){
+/**
+ * @author Raoul Harel
+ * @license The MIT license (LICENSE.txt)
+ * @copyright 2017 Raoul Harel
+ * @url https://github.com/rharel/js-steering-behaviors
+ */
+
+
 const Seek = require('./Seek');
 const Easing = require('../utility/Easing');
-const Vector = require('../math/Vector2');
 
 const EPSILON = 0.001;  // small number
 
 
 /**
- * Drives a body towards a given target position.
+ * Drives a vehicle towards a given target position.
  *
  * @details
  *    Up until a given distance D from the target, this behavior is identical
@@ -32,35 +102,35 @@ const EPSILON = 0.001;  // small number
  *    breaking radius (default is Easing.linear).
  * @constructor
  */
-function Arrival(
+function Arrive(
 	target,
 	desired_speed,
 	breaking_distance,
 	easing = Easing.linear)
 {
 	this._desired_speed = desired_speed;
-	this._seeking_behavior = new Seek(target, desired_speed);
+	this._seek = new Seek(target, desired_speed);
 	this._breaking_distance = breaking_distance;
 	this._ease = easing;
 }
-Arrival.prototype =
+Arrive.prototype =
 {
-	constructor: Arrival,
+	constructor: Arrive,
 
 	/**
-	 * Drives the specified body for the specified amount of time.
+	 * Drives the specified vehicle for the specified amount of time.
 	 *
-	 * @param body
-	 * 		The body to drive.
+	 * @param vehicle
+	 * 		The vehicle to drive.
 	 * @param dt
 	 * 		The drive's duration.
 	 * @returns
-	 * 		The desired force to be applied to the body.
+	 * 		The desired force to be applied to the vehicle.
 	 */
-	drive: function(body, dt = 1)
+	drive: function(vehicle, dt = 1)
 	{
 		let distance_to_target =
-			body.position.distance_to(this._seeking_behavior.target);
+			vehicle.position.distance_to(this._seek.target);
 
 		if (distance_to_target < EPSILON)
 		{
@@ -68,7 +138,7 @@ Arrival.prototype =
 		}
 		if (distance_to_target <= this._breaking_distance)
 		{
-			this._seeking_behavior.desired_speed = this._ease
+			this._seek.desired_speed = this._ease
 			(
 				0,
 				this._desired_speed,
@@ -77,25 +147,28 @@ Arrival.prototype =
 		}
 		else
 		{
-			this._seeking_behavior.desired_speed = this._desired_speed;
+			this._seek.desired_speed = this._desired_speed;
 		}
 
-		return this._seeking_behavior.drive(body, dt);
+		return this._seek.drive(vehicle, dt);
 	},
 
-	get target() { return this._seeking_behavior.target;},
+	get target() { return this._seek.target;},
 
 	get desired_speed() { return this._desired_speed; },
 	set desired_speed(value) { this._desired_speed = +value; },
 
 	get breaking_distance() { return this._breaking_distance; },
-	set breaking_distance(value) { this._breaking_distance = +value; }
+	set breaking_distance(value) { this._breaking_distance = +value; },
+
+	get ease() { return this._ease; },
+	set ease(value) { this._ease = value; }
 };
 
 
-module.exports = Arrival;
+module.exports = Arrive;
 
-},{"../math/Vector2":9,"../utility/Easing":11,"./Seek":4}],2:[function(require,module,exports){
+},{"../utility/Easing":12,"./Seek":5}],3:[function(require,module,exports){
 /**
  * @author Raoul Harel
  * @license The MIT license (LICENSE.txt)
@@ -107,72 +180,87 @@ module.exports = Arrival;
 const Vector = require('../math/Vector2');
 
 /**
- * Drives a body closer to the central position of nearby characters.
+ * Drives the vehicle along a path.
  *
- * @param get_nearest_neighbours
- *    Callback that evaluates and returns an array of position of bodies that
- *    are considered to be 'nearby'. The callback accepts a single Vector2
- *    argument indicating the driven body's current position.
- *
- * @param get_attraction_weight
- *    Callback that controls the scaling of the attracting force. The callback
- *    accepts a single scalar argument indicating the distance_to between the
- *    driven body and the central attraction point.
- *
+ * @param checkpoints
+ * 		An array of positions.
+ * @param desired_speed
+ * 		The desired cruising speed.
+ * @param breaking_distance
+ *      The distance to the target from which to begin breaking.
+ * @param do_loop
+ * 		True iff the patrol should loop.
  * @constructor
  */
-function Cohesion(get_nearest_neighbours, get_attraction_weight)
+function Patrol
+(
+	checkpoints,
+	desired_speed,
+	breaking_distance,
+	error_margin = 0.01,
+	do_loop = true)
 {
-	this._get_nearest_neighbours = get_nearest_neighbours;
-	this._get_attraction_weight = get_attraction_weight;
+	this._checkpoints = checkpoints;
+	this._target_index = 0;
+	this._arrive = new SB.Behavior.Arrive
+	(
+		checkpoints[0],
+		desired_speed,
+		breaking_distance
+	);
+	this._error_margin = error_margin;
+	this._do_loop = do_loop;
 }
-Cohesion.prototype =
+Patrol.prototype =
 {
-	constructor: Cohesion,
+	constructor: Patrol,
 
 	/**
-	 * Drives the specified body for the specified amount of time.
+	 * Drives the specified vehicle for the specified amount of time.
 	 *
-	 * @param body
-	 * 		The body to drive.
+	 * @param vehicle
+	 * 		The vehicle to drive.
 	 * @param dt
 	 * 		The drive's duration.
 	 * @returns
-	 * 		The desired force to be applied to the body.
+	 * 		The desired force to be applied to the vehicle.
 	 */
-	drive: function(body, dt = 1)
+	drive: function(vehicle, dt = 1)
 	{
-		const average_position = new Vector(0, 0);
-		const neighbour_positions = this._get_nearest_neighbours(body.position);
-
-		if (neighbour_positions.length === 1)
+		let target = this._arrive.target;
+		while (vehicle.position.distance_to(target) < this._error_margin)
 		{
-			return body.velocity.scale(-body.mass / dt);
-		}
-		else
-		{
-			neighbour_positions.forEach(position =>
+			if (this._target_index === this._checkpoints.length - 1)
 			{
-				average_position.add_(position);
-			});
-			average_position.scale_(1 / neighbour_positions.length);
-
-			const D = body.position.distance_to(average_position);
-			const W = this._get_attraction_weight(D);
-
-			return (
-				average_position
-					.subtract(body.position)
-					.scale_(W)
-			);
+				if (this._do_loop)
+				{
+					this._target_index = -1;
+				}
+				else
+				{
+					return new Vector(0, 0);
+				}
+			}
+			else
+			{
+				++ this._target_index;
+				target.assign(this._checkpoints[this._target_index]);
+			}
 		}
-	}
+		return this._arrive.drive(vehicle, dt);
+	},
+
+	get desired_speed() { return this._arrive.desired_speed; },
+	set desired_speed(value) { this._arrive.desired_speed = +value; },
+
+	get breaking_distance() { return this._arrive.breaking_distance; },
+	set breaking_distance(value) { this.breaking_distance = +value; }
 };
 
 
-module.exports = Cohesion;
+module.exports = Patrol;
 
-},{"../math/Vector2":9}],3:[function(require,module,exports){
+},{"../math/Vector2":10}],4:[function(require,module,exports){
 /**
  * @author Raoul Harel
  * @license The MIT license (LICENSE.txt)
@@ -185,73 +273,88 @@ const Seek = require('./Seek');
 const Predictor = require('../utility/Predictor');
 
 /**
- * Drives the body to pursue another body's position.
+ * Drives the vehicle to seek a dynamic position.
  *
- * @param target
- *    The body to pursue.
+ * @param get_target
+ *    Callback yielding the target position to seek.
  * @param desired_speed
  *    The desired cruising speed.
- * @param do_flee
- *    If true, drives the body away from the target instead of towards it
+ * @param do_evade
+ *    If true, drives the vehicle away from the target instead of towards it
  *    (default is false).
- * @param predictor
- *    Callback used to predict the target's position in the future. It accepts a
- *    single argument that is the target body (default is a static predictor
- *    looking 0.1s into the future).
  * @constructor
  */
-function Pursuit(
+function Pursue(get_target, desired_speed, do_evade = false)
+{
+	this._get_target = get_target;
+	this._seek = new Seek(new SB.Vector(0, 0), desired_speed, do_evade);
+}
+/**
+ * Drives the vehicle to intercept another vehicle.
+ *
+ * @param target
+ * 		The vehicle to pursue.
+ * @param desired_speed
+ * 		The desired cruising speed.
+ * @param predict_position
+ * 		A function which takes in a vehicle and outputs an approximation of its
+ * 		future position (default is linear extrapolation).
+ * @param do_evade
+ * 		If true, drives the vehicle away from the target instead of towards it
+ * 		(default is false).
+ * @returns {Pursue}
+ */
+Pursue.vehicle = function(
 	target,
 	desired_speed,
-	do_flee = false,
-	predictor = Predictor.static(0.1))
+	predict_position = Predictor.static(0.1),
+	do_evade = false)
 {
-	this._target = target;
-	this._predict_position = predictor;
-	this._seeking_behavior = new Seek(target.position, desired_speed, do_flee);
-}
-Pursuit.prototype =
+	return new Pursue(
+		() => predict_position(target),
+		desired_speed,
+		do_evade
+	);
+};
+Pursue.prototype =
 {
-	constructor: Pursuit,
+	constructor: Pursue,
 
 	/**
-	 * Drives the specified body for the specified amount of time.
+	 * Drives the specified vehicle for the specified amount of time.
 	 *
-	 * @param body
-	 * 		The body to drive.
+	 * @param vehicle
+	 * 		The vehicle to drive.
 	 * @param dt
 	 * 		The drive's duration.
 	 * @returns
-	 * 		The desired force to be applied to the body.
+	 * 		The desired force to be applied to the vehicle.
 	 */
-	drive: function(body, dt = 1)
+	drive: function(vehicle, dt = 1)
 	{
-		const target_future_position =
-			this._predict_position(this._target);
+		this._seek.target.assign(this._get_target());
 
-		this._seeking_behavior.target.assign(target_future_position);
-
-		return this._seeking_behavior.drive(body, dt);
+		return this._seek.drive(vehicle, dt);
 	},
 
-	get target() { return this._target; },
-	set target(value) { this._target = value; },
+	get get_target() { return this._get_target; },
+	set get_target(value) { this._get_target = value; },
 
-	get desired_speed() { return this._seeking_behavior.desired_speed; },
-	set desired_speed(value) { this._seeking_behavior.desired_speed = value; },
+	get target() { return this._seek.target; },
+	set target(value) { this._seek.target.assign(value); },
 
-	is_fleeing: function() { return this._seeking_behavior.is_fleeing(); },
-	flee: function() { this._seeking_behavior.flee(); },
-	seek: function() { this._seeking_behavior.seek(); },
+	get desired_speed() { return this._seek.desired_speed; },
+	set desired_speed(value) { this._seek.desired_speed = value; },
 
-	get predictor() { return this._predict_position; },
-	set predictor(value) { this._predict_position = value; }
+	is_evading: function() { return this._seek.is_fleeing(); },
+	evade: function() { this._seek.flee(); },
+	pursue: function() { this._seek.seek(); },
 };
 
 
-module.exports = Pursuit;
+module.exports = Pursue;
 
-},{"../utility/Predictor":12,"./Seek":4}],4:[function(require,module,exports){
+},{"../utility/Predictor":13,"./Seek":5}],5:[function(require,module,exports){
 /**
  * @author Raoul Harel
  * @license The MIT license (LICENSE.txt)
@@ -261,14 +364,14 @@ module.exports = Pursuit;
 
 
 /**
- * Drives the body towards a target position.
+ * Drives the vehicle towards a target position.
  *
  * @param target
  *    The destination.
  * @param desired_speed
  *    The desired cruising speed.
  * @param do_flee
- *    If true, drives the body away from the target instead of towards it
+ *    If true, drives the vehicle away from the target instead of towards it
  *    (default is false).
  * @constructor
  */
@@ -283,20 +386,20 @@ Seek.prototype =
 	constructor: Seek,
 
 	/**
-	 * Drives the specified body for the specified amount of time.
+	 * Drives the specified vehicle for the specified amount of time.
 	 *
-	 * @param body
-	 * 		The body to drive.
+	 * @param vehicle
+	 * 		The vehicle to drive.
 	 * @param dt
 	 * 		The drive's duration.
 	 * @returns
-	 * 		The desired force to be applied to the body.
+	 * 		The desired force to be applied to the vehicle.
 	 */
-	drive: function(body, dt = 1)
+	drive: function(vehicle, dt = 1)
 	{
 		const desired_velocity =
 			this._target
-				.subtract(body.position)
+				.subtract(vehicle.position)
 				.unit_()
 				.scale_(this._desired_speed);
 
@@ -307,8 +410,8 @@ Seek.prototype =
 
 		return (
 			desired_velocity
-				.subtract(body.velocity)
-				.scale_(body.mass / dt)
+				.subtract(vehicle.velocity)
+				.scale_(vehicle.mass / dt)
 		);
 	},
 
@@ -325,7 +428,7 @@ Seek.prototype =
 
 module.exports = Seek;
 
-},{}],5:[function(require,module,exports){
+},{}],6:[function(require,module,exports){
 /**
  * @author Raoul Harel
  * @license The MIT license (LICENSE.txt)
@@ -337,71 +440,64 @@ module.exports = Seek;
 const Vector = require('../math/Vector2');
 
 /**
- * Drives a body away from the central position of nearby characters.
+ * Drives a vehicle away from the central position of nearby sites.
  *
- * @param get_nearest_neighbours
- *    Callback that evaluates and returns an array of positions of bodies that
+ * @param get_repulsion_sites
+ *    Callback that evaluates and returns an array of positions that
  *    are considered to be 'nearby'. The callback accepts a single Vector2
- *    argument indicating the driven body's current position.
- *
- * @param get_repulsion_weight
- *    Callback that controls the scaling of the repulsive force. The callback
- *    accepts a single scalar argument indicating the distance between the
- *    driven body and the repulsion point.
- *
+ *    argument indicating the driven vehicle's current position.
+ * @param repulsion_speed
+ *    The desired speed when repulsed.
  * @constructor
  */
-function Separation(get_nearest_neighbours, get_repulsion_weight)
+function Separate(get_repulsion_sites, repulsion_speed)
 {
-	this._get_nearest_neighbours = get_nearest_neighbours;
-	this._get_repulsion_weight = get_repulsion_weight;
+	this._get_repulsion_sites = get_repulsion_sites;
+	this._seek = new SB.Behavior.Seek(new Vector(0, 0), repulsion_speed, true);
 }
-Separation.prototype =
+Separate.prototype =
 {
-	constructor: Separation,
+	constructor: Separate,
 
 	/**
-	 * Drives the specified body for the specified amount of time.
+	 * Drives the specified vehicle for the specified amount of time.
 	 *
-	 * @param body
-	 * 		The body to drive.
+	 * @param vehicle
+	 * 		The vehicle to drive.
 	 * @param dt
 	 * 		The drive's duration.
 	 * @returns
-	 * 		The desired force to be applied to the body.
+	 * 		The desired force to be applied to the vehicle.
 	 */
-	drive: function(body, dt = 1)
+	drive: function(vehicle, dt = 1)
 	{
-		const neighbour_positions = this._get_nearest_neighbours(body.position);
+		const sites = this._get_repulsion_sites(vehicle.position);
 
-		if (neighbour_positions.length === 1)
+		if (sites.length === 0)
 		{
-			return body.velocity.scale(-body.mass / dt);
+			return vehicle.velocity.scale(-vehicle.mass / dt);
 		}
 		else
 		{
-			const total_force = new Vector(0, 0);
-			neighbour_positions.forEach(neighbour_position =>
-			{
-				const D = body.position.distance_to(neighbour_position);
-				const W = this._get_repulsion_weight(D);
-				const repulsive_force =
-					body.position
-						.subtract(neighbour_position)
-						.unit_()
-						.scale_(W);
+			const average_position = new Vector(0, 0);
+			sites.forEach(site => average_position.add_(site.position));
+			average_position.scale(1 / sites.length);
 
-				total_force.add_(repulsive_force);
-			});
-			return total_force;
+			this._seek.target.assign(average_position);
+			return this._seek.drive(vehicle, dt);
 		}
-	}
+	},
+
+	get target() { return this._seek.target;},
+
+	get repulsion_speed() { return this._seek.desired_speed; },
+	set repulsion_speed(value) { this._seek.desired_speed = +value; }
 };
 
 
-module.exports = Separation;
+module.exports = Separate;
 
-},{"../math/Vector2":9}],6:[function(require,module,exports){
+},{"../math/Vector2":10}],7:[function(require,module,exports){
 /**
  * @author Raoul Harel
  * @license The MIT license (LICENSE.txt)
@@ -413,63 +509,61 @@ module.exports = Separation;
 const Vector = require('../math/Vector2');
 
 /**
- * Drives the body in random directions.
- *
- * @param max_turn_angle
- *    Maximum turn angle (in radians).
+ * Drives the vehicle in random directions.
  *
  * @param max_turn_rate
  *    Maximum change in turn angle from update to update.
- *
+ * @param max_turn_rate_change
+ *    Maximum change in the turn rate from update to update.
  * @param speed
  *    Desired cruising speed.
  *
  * @constructor
  */
-function Wander(max_turn_angle, max_turn_rate, speed)
+function Wander(max_turn_rate, max_turn_rate_change, speed)
 {
-	this._max_turn_angle = Math.abs(max_turn_angle);
 	this._max_turn_rate = Math.abs(max_turn_rate);
+	this._max_turn_rate_change = Math.abs(max_turn_rate_change);
 	this._speed = speed;
 
-	this._current_angle = 0;
+	this._current_turn_rate = 0;
 }
 Wander.prototype =
 {
 	constructor: Wander,
 
 	/**
-	 * Drives the specified body for the specified amount of time.
+	 * Drives the specified vehicle for the specified amount of time.
 	 *
-	 * @param body
-	 * 		The body to drive.
+	 * @param vehicle
+	 * 		The vehicle to drive.
 	 * @param dt
 	 * 		The drive's duration.
 	 * @returns
-	 * 		The desired force to be applied to the body.
+	 * 		The desired force to be applied to the vehicle.
 	 */
-	drive: function(body, dt = 1)
+	drive: function(vehicle, dt = 1)
 	{
-		this._current_angle += random_in_range
+		this._current_turn_rate += random_in_range
 		(
-	    	-this._max_turn_rate,
-	    	 this._max_turn_rate
+			-this._max_turn_rate_change,
+			this._max_turn_rate_change
 		);
-		this._current_angle = Math.min
+		this._current_turn_rate = Math.min
 		(
-			this._max_turn_angle,
-			Math.max(-this._max_turn_angle, this._current_angle)
+			this._max_turn_rate,
+			Math.max(-this._max_turn_rate, this._current_turn_rate)
 		);
-
-		let force;
-		force = Vector.X.rotate(body.orientation + this._current_angle);
-		force.scale_(this._speed * body.mass / dt);
-
-		return force;
+		const desired_velocity =
+			Vector.X
+				.rotate(vehicle.orientation + this._current_turn_rate)
+				.scale_(this._speed);
+		return (
+			desired_velocity
+				.subtract(vehicle.velocity)
+				.scale_(vehicle.mass / dt)
+		);
 	},
-
-	get max_turn_angle() { return this._max_turn_angle; },
-	set max_turn_angle(value) { this._max_turn_angle = Math.abs(+value); },
 
 	get max_turn_rate() { return this._max_turn_rate; },
 	set max_turn_rate(value) { this._max_turn_rate = Math.abs(+value); },
@@ -496,7 +590,7 @@ function random_in_range(min, max)
 
 module.exports = Wander;
 
-},{"../math/Vector2":9}],7:[function(require,module,exports){
+},{"../math/Vector2":10}],8:[function(require,module,exports){
 /**
  * @author Raoul Harel
  * @license The MIT license (LICENSE.txt)
@@ -509,7 +603,7 @@ const Vector = require('../math/Vector2');
 
 
 /**
- * A body's default properties.
+ * A vehicle's default properties.
  */
 const DEFAULT_PROPERTIES =
 {
@@ -524,20 +618,20 @@ const DEFAULT_PROPERTIES =
 	max_speed: 1
 };
 /**
- * Represents a point-mass body capable of thrust.
+ * Represents a point-mass vehicle capable of thrust.
  *
  * @constructor
  * @param user_properties
- *    An object describing the body's properties and initial state,
- *    contains the following keys:
- *      - mass {number}: Body mass.
+ *    An object describing the vehicle's properties and initial state,
+ *    may contain any of the following keys:
+ *      - mass {number}: Vehicle mass.
  *      - position {Vector2}: Initial position.
- *      - orientation {number}: Initial orientation angle_to (in radians).
+ *      - orientation {number}: Initial orientation angle (in radians).
  *      - velocity {Vector2}: Initial velocity.
  *      - max_thrust {number}: Maximum thrust.
  *      - max_speed {number}: Maximum speed.
  */
-function Body(user_properties = DEFAULT_PROPERTIES)
+function Vehicle(user_properties = DEFAULT_PROPERTIES)
 {
 	const properties = Object.assign({}, DEFAULT_PROPERTIES, user_properties);
 
@@ -546,7 +640,6 @@ function Body(user_properties = DEFAULT_PROPERTIES)
 
 	this._position = properties.position.clone();
 	this._orientation = properties.orientation;
-
 	this._velocity = properties.velocity.clone();
 
 	this._max_thrust = properties.max_thrust;
@@ -554,12 +647,12 @@ function Body(user_properties = DEFAULT_PROPERTIES)
 
 	this._net_force = new Vector(0, 0);
 }
-Body.prototype =
+Vehicle.prototype =
 {
-	constructor: Body,
+	constructor: Vehicle,
 
 	/**
-	* Applies the specified force vector to the body.
+	* Applies the specified force vector to the vehicle.
 	*
 	* @param F
 	*    Force to apply.
@@ -570,7 +663,7 @@ Body.prototype =
 	},
 
 	/**
-	* Advances the body in time.
+	* Advances the vehicle in time.
 	*
 	* @details
 	*    Uses forward Euler integration to compute new position and velocity.
@@ -582,9 +675,9 @@ Body.prototype =
 	step: function(dt)
 	{
 		truncate(this._net_force, this._max_thrust);
-		const acceleration = this._net_force.scale(this._mass_inverse * dt);
+		const acceleration = this._net_force.scale(this._mass_inverse);
 
-		this._velocity.add_(acceleration);
+		this._velocity.add_(acceleration.scale(dt));
 		truncate(this._velocity, this._max_speed);
 
 		this._position.add_(this._velocity.scale(dt));
@@ -618,26 +711,26 @@ Body.prototype =
  * Performs magnitude truncation on a vector.
  * @param v
  * 		The vector to truncate.
- * @param bound
+ * @param upper_bound
  * 		The bounding value.
  * @returns
  * 		The truncated vector.
  */
-function truncate(v, bound)
+function truncate(v, upper_bound)
 {
 	const norm = v.norm();
-	if (norm > bound)
+	if (norm > upper_bound)
 	{
-		v.scale_(bound / norm);
+		v.scale_(upper_bound / norm);
 	}
 
 	return v;
 }
 
 
-module.exports = Body;
+module.exports = Vehicle;
 
-},{"../math/Vector2":9}],8:[function(require,module,exports){
+},{"../math/Vector2":10}],9:[function(require,module,exports){
 /**
  * @author Raoul Harel
  * @license The MIT license (LICENSE.txt)
@@ -648,14 +741,15 @@ module.exports = Body;
 
 const Behavior =
 {
-	Arrival: require('./behaviors/Arrival'),
-	Cohesion: require('./behaviors/Cohesion'),
-	Pursuit: require('./behaviors/Pursuit'),
+	Arrive: require('./behaviors/Arrive'),
+	Pursue: require('./behaviors/Pursue'),
 	Seek: require('./behaviors/Seek'),
-	Separation: require('./behaviors/Separation'),
-	Wander: require('./behaviors/Wander')
+	Separate: require('./behaviors/Separate'),
+	Wander: require('./behaviors/Wander'),
+	Patrol: require('./behaviors/Patrol'),
+	Align: require('./behaviors/Align')
 };
-const Body = require('./core/Body');
+const Vehicle = require('./core/Vehicle');
 const Vector = require('./math/Vector2');
 const Spatial =
 {
@@ -667,7 +761,7 @@ const Predictor = require('./utility/Predictor');
 const SB =
 {
 	Behavior: Behavior,
-	Body: Body,
+	Vehicle: Vehicle,
 	Vector: Vector,
 	Spatial: Spatial,
 	Easing: Easing,
@@ -682,7 +776,7 @@ if (window !== undefined)
 	window.SB = SB;
 }
 
-},{"./behaviors/Arrival":1,"./behaviors/Cohesion":2,"./behaviors/Pursuit":3,"./behaviors/Seek":4,"./behaviors/Separation":5,"./behaviors/Wander":6,"./core/Body":7,"./math/Vector2":9,"./spatial/NaiveNearestNeighbour":10,"./utility/Easing":11,"./utility/Predictor":12}],9:[function(require,module,exports){
+},{"./behaviors/Align":1,"./behaviors/Arrive":2,"./behaviors/Patrol":3,"./behaviors/Pursue":4,"./behaviors/Seek":5,"./behaviors/Separate":6,"./behaviors/Wander":7,"./core/Vehicle":8,"./math/Vector2":10,"./spatial/NaiveNearestNeighbour":11,"./utility/Easing":12,"./utility/Predictor":13}],10:[function(require,module,exports){
 /**
  * @author Raoul Harel
  * @license The MIT license (LICENSE.txt)
@@ -1020,7 +1114,7 @@ Vector2.Y = new Vector2(0, 1);
 
 module.exports = Vector2;
 
-},{}],10:[function(require,module,exports){
+},{}],11:[function(require,module,exports){
 /**
  * @author Raoul Harel
  * @license The MIT license (LICENSE.txt)
@@ -1049,10 +1143,12 @@ NaiveNearestNeighbour.prototype =
 	 * 		The site's ID.
 	 * @param position
 	 * 		The site's position.
+	 * @param data
+	 * 		The data associated with the site (default is null).
 	 */
-	set_site_position: function(id, position)
+	set_site_position: function(id, position, data = null)
 	{
-		this._sites[id] = position;
+		this._sites[id] = { position: position, data: data };
 	},
 	/**
 	 * Removes a site from the index.
@@ -1066,36 +1162,36 @@ NaiveNearestNeighbour.prototype =
 	},
 
 	/**
-	 * Compute all sites that are within the specified distance_to from a specified
+	 * Retrieve all sites that are within the specified distance from a specified
 	 * query position.
 	 *
-	 * @param position
+	 * @param query
 	 * 		The query position.
 	 * @param radius
 	 * 		The radius of the query.
 	 * @returns
-	 * 		An array of site IDs.
+	 * 		An array of nearby sites.
 	 */
-	get_nearest_in_radius: function(position, radius)
+	get_nearest_in_radius: function(query, radius)
 	{
-		let positions = [];
+		let results = [];
 
 		for (const id in this._sites)
 		{
-			if (this._sites.hasOwnProperty(id) &&
-			    this._sites[id].distance_to(position) <= radius)
+			if (!this._sites.hasOwnProperty(id)) { continue; }
+			if (this._sites[id].position.distance_to(query) <= radius)
 			{
-				positions.push(this._sites[id]);
+				results.push(this._sites[id]);
 			}
 		}
-		return positions;
+		return results;
 	}
 };
 
 
 module.exports = NaiveNearestNeighbour;
 
-},{}],11:[function(require,module,exports){
+},{}],12:[function(require,module,exports){
 /**
  * @author Raoul Harel
  * @license The MIT license (LICENSE.txt)
@@ -1126,7 +1222,7 @@ module.exports =
 	}
 };
 
-},{}],12:[function(require,module,exports){
+},{}],13:[function(require,module,exports){
 /**
  * @author Raoul Harel
  * @license The MIT license (LICENSE.txt)
@@ -1136,16 +1232,16 @@ module.exports =
 
 
 /**
- * Compute a body's future position given its current position and velocity.
+ * Compute a vehicle's future position given its current position and velocity.
  *
  * @param position
- * 		The body's current position.
+ * 		The vehicle's current position.
  * @param velocity
- * 		The body's static velocity.
+ * 		The vehicle's static velocity.
  * @param dt
  * 		The amount of time to look into the future.
  * @returns
- * 		The body's position in the future.
+ * 		The vehicle's position in the future.
  */
 function compute_future_position(position, velocity, dt)
 {
@@ -1156,7 +1252,7 @@ function compute_future_position(position, velocity, dt)
 module.exports =
 {
 	/**
-	 * Creates a predictor function that approximates a body's future position
+	 * Creates a predictor function that approximates a vehicle's future position
 	 * based on its current position and velocity (assuming the velocity remains
 	 * static), and computing its position a specified amount of time
 	 * into the future.
@@ -1164,22 +1260,22 @@ module.exports =
 	 * @param dt
 	 * 		The amount of time to look into the future.
 	 * @returns
-	 * 		A function: body => future position
+	 * 		A function: vehicle => future position
 	 */
 	static: function(dt)
 	{
-		return function(body)
+		return function(vehicle)
 		{
 			return compute_future_position
 			(
-				body.position,
-				body.velocity,
+				vehicle.position,
+				vehicle.velocity,
 				dt
 			);
 		};
 	},
 	/**
-	 * Creates a predictor function that approximates a body's future position
+	 * Creates a predictor function that approximates a vehicle's future position
 	 * based on its current position and velocity (assuming the velocity remains
 	 * static), and computing its position a dynamic amount of time into the
 	 * future. The amount of time to look ahead is retrieved from a specified
@@ -1189,20 +1285,20 @@ module.exports =
 	 * 		The function which yields the amount of time to look ahead:
 	 * 		() => number
 	 * @returns {Function}
-	 *		A function: body => future position
+	 *		A function: vehicle => future position
 	 */
 	dynamic: function(get_dt)
 	{
-		return function(body)
+		return function(vehicle)
 		{
 			return compute_future_position
 			(
-				body.position,
-				body.velocity,
+				vehicle.position,
+				vehicle.velocity,
 				get_dt()
 			);
 		};
 	}
 };
 
-},{}]},{},[8]);
+},{}]},{},[9]);

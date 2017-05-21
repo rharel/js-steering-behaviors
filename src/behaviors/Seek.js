@@ -7,14 +7,14 @@
 
 
 /**
- * Drives the body towards a target position.
+ * Drives the vehicle towards a target position.
  *
  * @param target
  *    The destination.
  * @param desired_speed
  *    The desired cruising speed.
  * @param do_flee
- *    If true, drives the body away from the target instead of towards it
+ *    If true, drives the vehicle away from the target instead of towards it
  *    (default is false).
  * @constructor
  */
@@ -29,20 +29,20 @@ Seek.prototype =
 	constructor: Seek,
 
 	/**
-	 * Drives the specified body for the specified amount of time.
+	 * Drives the specified vehicle for the specified amount of time.
 	 *
-	 * @param body
-	 * 		The body to drive.
+	 * @param vehicle
+	 * 		The vehicle to drive.
 	 * @param dt
 	 * 		The drive's duration.
 	 * @returns
-	 * 		The desired force to be applied to the body.
+	 * 		The desired force to be applied to the vehicle.
 	 */
-	drive: function(body, dt = 1)
+	drive: function(vehicle, dt = 1)
 	{
 		const desired_velocity =
 			this._target
-				.subtract(body.position)
+				.subtract(vehicle.position)
 				.unit_()
 				.scale_(this._desired_speed);
 
@@ -53,8 +53,8 @@ Seek.prototype =
 
 		return (
 			desired_velocity
-				.subtract(body.velocity)
-				.scale_(body.mass / dt)
+				.subtract(vehicle.velocity)
+				.scale_(vehicle.mass / dt)
 		);
 	},
 

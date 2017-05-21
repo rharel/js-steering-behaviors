@@ -26,10 +26,12 @@ NaiveNearestNeighbour.prototype =
 	 * 		The site's ID.
 	 * @param position
 	 * 		The site's position.
+	 * @param data
+	 * 		The data associated with the site (default is null).
 	 */
-	set_site_position: function(id, position)
+	set_site_position: function(id, position, data = null)
 	{
-		this._sites[id] = position;
+		this._sites[id] = { position: position, data: data };
 	},
 	/**
 	 * Removes a site from the index.
@@ -43,29 +45,29 @@ NaiveNearestNeighbour.prototype =
 	},
 
 	/**
-	 * Compute all sites that are within the specified distance_to from a specified
+	 * Retrieve all sites that are within the specified distance from a specified
 	 * query position.
 	 *
-	 * @param position
+	 * @param query
 	 * 		The query position.
 	 * @param radius
 	 * 		The radius of the query.
 	 * @returns
-	 * 		An array of site IDs.
+	 * 		An array of nearby sites.
 	 */
-	get_nearest_in_radius: function(position, radius)
+	get_nearest_in_radius: function(query, radius)
 	{
-		let positions = [];
+		let results = [];
 
 		for (const id in this._sites)
 		{
-			if (this._sites.hasOwnProperty(id) &&
-			    this._sites[id].distance_to(position) <= radius)
+			if (!this._sites.hasOwnProperty(id)) { continue; }
+			if (this._sites[id].position.distance_to(query) <= radius)
 			{
-				positions.push(this._sites[id]);
+				results.push(this._sites[id]);
 			}
 		}
-		return positions;
+		return results;
 	}
 };
 

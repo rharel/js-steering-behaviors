@@ -23,7 +23,7 @@ Renderer.prototype =
 
 		_2d.restore();
 	},
-	render_body: function(_2d, body, user_style)
+	render_vehicle: function(_2d, vehicle, user_style)
 	{
 		let style = Object.assign({}, this._style);
 		if (user_style !== undefined)
@@ -42,15 +42,15 @@ Renderer.prototype =
 		const w2 = 0.5 * style.size.x;
 		const h2 = 0.5 * style.size.y;
 
-		const heading = SB.Vector.X.rotate(body.orientation);
+		const heading = SB.Vector.X.rotate(vehicle.orientation);
 
 		const u = heading.scale(h2);
 		const v = new SB.Vector(u.y, -u.x).unit_().scale_(w2);
 
-		const a = body.position.add(u);
-		const b = body.position.subtract(u).add_(v);
-		const c = body.position.subtract(u.scale(0.5));
-		const d = body.position.subtract(u).subtract_(v);
+		const a = vehicle.position.add(u);
+		const b = vehicle.position.subtract(u).add_(v);
+		const c = vehicle.position.subtract(u.scale(0.5));
+		const d = vehicle.position.subtract(u).subtract_(v);
 
 		_2d.beginPath();
 

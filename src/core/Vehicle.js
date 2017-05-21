@@ -10,7 +10,7 @@ const Vector = require('../math/Vector2');
 
 
 /**
- * A body's default properties.
+ * A vehicle's default properties.
  */
 const DEFAULT_PROPERTIES =
 {
@@ -25,20 +25,20 @@ const DEFAULT_PROPERTIES =
 	max_speed: 1
 };
 /**
- * Represents a point-mass body capable of thrust.
+ * Represents a point-mass vehicle capable of thrust.
  *
  * @constructor
  * @param user_properties
- *    An object describing the body's properties and initial state,
- *    contains the following keys:
- *      - mass {number}: Body mass.
+ *    An object describing the vehicle's properties and initial state,
+ *    may contain any of the following keys:
+ *      - mass {number}: Vehicle mass.
  *      - position {Vector2}: Initial position.
- *      - orientation {number}: Initial orientation angle_to (in radians).
+ *      - orientation {number}: Initial orientation angle (in radians).
  *      - velocity {Vector2}: Initial velocity.
  *      - max_thrust {number}: Maximum thrust.
  *      - max_speed {number}: Maximum speed.
  */
-function Body(user_properties = DEFAULT_PROPERTIES)
+function Vehicle(user_properties = DEFAULT_PROPERTIES)
 {
 	const properties = Object.assign({}, DEFAULT_PROPERTIES, user_properties);
 
@@ -47,7 +47,6 @@ function Body(user_properties = DEFAULT_PROPERTIES)
 
 	this._position = properties.position.clone();
 	this._orientation = properties.orientation;
-
 	this._velocity = properties.velocity.clone();
 
 	this._max_thrust = properties.max_thrust;
@@ -55,12 +54,12 @@ function Body(user_properties = DEFAULT_PROPERTIES)
 
 	this._net_force = new Vector(0, 0);
 }
-Body.prototype =
+Vehicle.prototype =
 {
-	constructor: Body,
+	constructor: Vehicle,
 
 	/**
-	* Applies the specified force vector to the body.
+	* Applies the specified force vector to the vehicle.
 	*
 	* @param F
 	*    Force to apply.
@@ -71,7 +70,7 @@ Body.prototype =
 	},
 
 	/**
-	* Advances the body in time.
+	* Advances the vehicle in time.
 	*
 	* @details
 	*    Uses forward Euler integration to compute new position and velocity.
@@ -83,9 +82,9 @@ Body.prototype =
 	step: function(dt)
 	{
 		truncate(this._net_force, this._max_thrust);
-		const acceleration = this._net_force.scale(this._mass_inverse * dt);
+		const acceleration = this._net_force.scale(this._mass_inverse);
 
-		this._velocity.add_(acceleration);
+		this._velocity.add_(acceleration.scale(dt));
 		truncate(this._velocity, this._max_speed);
 
 		this._position.add_(this._velocity.scale(dt));
@@ -119,21 +118,21 @@ Body.prototype =
  * Performs magnitude truncation on a vector.
  * @param v
  * 		The vector to truncate.
- * @param bound
+ * @param upper_bound
  * 		The bounding value.
  * @returns
  * 		The truncated vector.
  */
-function truncate(v, bound)
+function truncate(v, upper_bound)
 {
 	const norm = v.norm();
-	if (norm > bound)
+	if (norm > upper_bound)
 	{
-		v.scale_(bound / norm);
+		v.scale_(upper_bound / norm);
 	}
 
 	return v;
 }
 
 
-module.exports = Body;
+module.exports = Vehicle;

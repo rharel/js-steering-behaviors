@@ -8,13 +8,12 @@
 
 const Seek = require('./Seek');
 const Easing = require('../utility/Easing');
-const Vector = require('../math/Vector2');
 
 const EPSILON = 0.001;  // small number
 
 
 /**
- * Drives a body towards a given target position.
+ * Drives a vehicle towards a given target position.
  *
  * @details
  *    Up until a given distance D from the target, this behavior is identical
@@ -31,35 +30,35 @@ const EPSILON = 0.001;  // small number
  *    breaking radius (default is Easing.linear).
  * @constructor
  */
-function Arrival(
+function Arrive(
 	target,
 	desired_speed,
 	breaking_distance,
 	easing = Easing.linear)
 {
 	this._desired_speed = desired_speed;
-	this._seeking_behavior = new Seek(target, desired_speed);
+	this._seek = new Seek(target, desired_speed);
 	this._breaking_distance = breaking_distance;
 	this._ease = easing;
 }
-Arrival.prototype =
+Arrive.prototype =
 {
-	constructor: Arrival,
+	constructor: Arrive,
 
 	/**
-	 * Drives the specified body for the specified amount of time.
+	 * Drives the specified vehicle for the specified amount of time.
 	 *
-	 * @param body
-	 * 		The body to drive.
+	 * @param vehicle
+	 * 		The vehicle to drive.
 	 * @param dt
 	 * 		The drive's duration.
 	 * @returns
-	 * 		The desired force to be applied to the body.
+	 * 		The desired force to be applied to the vehicle.
 	 */
-	drive: function(body, dt = 1)
+	drive: function(vehicle, dt = 1)
 	{
 		let distance_to_target =
-			body.position.distance_to(this._seeking_behavior.target);
+			vehicle.position.distance_to(this._seek.target);
 
 		if (distance_to_target < EPSILON)
 		{
@@ -67,7 +66,7 @@ Arrival.prototype =
 		}
 		if (distance_to_target <= this._breaking_distance)
 		{
-			this._seeking_behavior.desired_speed = this._ease
+			this._seek.desired_speed = this._ease
 			(
 				0,
 				this._desired_speed,
@@ -76,20 +75,23 @@ Arrival.prototype =
 		}
 		else
 		{
-			this._seeking_behavior.desired_speed = this._desired_speed;
+			this._seek.desired_speed = this._desired_speed;
 		}
 
-		return this._seeking_behavior.drive(body, dt);
+		return this._seek.drive(vehicle, dt);
 	},
 
-	get target() { return this._seeking_behavior.target;},
+	get target() { return this._seek.target;},
 
 	get desired_speed() { return this._desired_speed; },
 	set desired_speed(value) { this._desired_speed = +value; },
 
 	get breaking_distance() { return this._breaking_distance; },
-	set breaking_distance(value) { this._breaking_distance = +value; }
+	set breaking_distance(value) { this._breaking_distance = +value; },
+
+	get ease() { return this._ease; },
+	set ease(value) { this._ease = value; }
 };
 
 
-module.exports = Arrival;
+module.exports = Arrive;

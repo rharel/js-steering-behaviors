@@ -10,7 +10,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Separation Visual Test [js-steering-behaviors]</title>
+    <title>Align Visual Test [js-steering-behaviors]</title>
 
     <link rel="stylesheet" href="css/visual_test.css">
 
@@ -20,7 +20,7 @@
     <script src="js/Renderer.js"></script>
 </head>
 <body>
-<h1>Separation behavior visual test</h1>
+<h1>Align behavior visual test</h1>
 <script>
 
     (function() {
@@ -42,36 +42,39 @@
 			}
 		);
 		const NaiveNN = new SB.Spatial.NaiveNN();
-		const get_NN = position => NaiveNN.get_nearest_in_radius(position, 200);
-		const get_repulsion_weight = distance => 5;
-        const separation_behavior =
-            new SB.Behavior.Separation(get_NN, get_repulsion_weight);
+		const get_NN = position => NaiveNN
+            .get_nearest_in_radius(position, 100)
+			.filter(item => item.position !== position);
 
 		simulation.agents.push(
         {
-            body: new SB.Body
+            vehicle: new SB.Vehicle
             ({
-                position: new SB.Vector(245, 245),
+                position: new SB.Vector(50, 50),
                 max_thrust: 100,
                 max_speed: 200
             }),
-            behavior: separation_behavior,
+            behavior: new SB.Behavior.Seek(new SB.Vector(500, 50), 200),
             style: { fill: 'lightgreen' }
         });
 		simulation.agents.push(
         {
-            body: new SB.Body
+            vehicle: new SB.Vehicle
             ({
-                position: new SB.Vector(255, 255),
-                max_thrust: 100,
+                position: new SB.Vector(255, 100),
+                max_thrust: 200,
                 max_speed: 200
             }),
-            behavior: separation_behavior,
+            behavior: new SB.Behavior.Align(get_NN),
             style: { fill: 'red' }
         });
 		simulation.agents.forEach((agent, i) =>
 		{
-			NaiveNN.set_site_position(i, agent.body.position);
+			NaiveNN.set_site_position
+            (
+            	i, agent.vehicle.position,
+                { velocity: agent.vehicle.velocity }
+            );
 		});
 
 		let t_before = new Date();
@@ -81,15 +84,14 @@
 			const dt = (t_now - t_before) / 1000;
 			t_before = t_now;
 
-
-			simulation.step(dt === 0 ? 1 : dt);
+			simulation.step(dt === 0 ? 0.001 : dt);
 
 			renderer.render_background(_2d);
 			simulation.agents.forEach(agent =>
 			{
-				renderer.render_body(_2d, agent.body, agent.style);
+				renderer.render_vehicle(_2d, agent.vehicle, agent.style);
 			});
-			requestAnimationFrame(main);
+			setTimeout(() => requestAnimationFrame(main), 15);
 		}
 		main();
     })();

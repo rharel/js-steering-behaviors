@@ -9,63 +9,61 @@
 const Vector = require('../math/Vector2');
 
 /**
- * Drives the body in random directions.
- *
- * @param max_turn_angle
- *    Maximum turn angle (in radians).
+ * Drives the vehicle in random directions.
  *
  * @param max_turn_rate
  *    Maximum change in turn angle from update to update.
- *
+ * @param max_turn_rate_change
+ *    Maximum change in the turn rate from update to update.
  * @param speed
  *    Desired cruising speed.
  *
  * @constructor
  */
-function Wander(max_turn_angle, max_turn_rate, speed)
+function Wander(max_turn_rate, max_turn_rate_change, speed)
 {
-	this._max_turn_angle = Math.abs(max_turn_angle);
 	this._max_turn_rate = Math.abs(max_turn_rate);
+	this._max_turn_rate_change = Math.abs(max_turn_rate_change);
 	this._speed = speed;
 
-	this._current_angle = 0;
+	this._current_turn_rate = 0;
 }
 Wander.prototype =
 {
 	constructor: Wander,
 
 	/**
-	 * Drives the specified body for the specified amount of time.
+	 * Drives the specified vehicle for the specified amount of time.
 	 *
-	 * @param body
-	 * 		The body to drive.
+	 * @param vehicle
+	 * 		The vehicle to drive.
 	 * @param dt
 	 * 		The drive's duration.
 	 * @returns
-	 * 		The desired force to be applied to the body.
+	 * 		The desired force to be applied to the vehicle.
 	 */
-	drive: function(body, dt = 1)
+	drive: function(vehicle, dt = 1)
 	{
-		this._current_angle += random_in_range
+		this._current_turn_rate += random_in_range
 		(
-	    	-this._max_turn_rate,
-	    	 this._max_turn_rate
+			-this._max_turn_rate_change,
+			this._max_turn_rate_change
 		);
-		this._current_angle = Math.min
+		this._current_turn_rate = Math.min
 		(
-			this._max_turn_angle,
-			Math.max(-this._max_turn_angle, this._current_angle)
+			this._max_turn_rate,
+			Math.max(-this._max_turn_rate, this._current_turn_rate)
 		);
-
-		let force;
-		force = Vector.X.rotate(body.orientation + this._current_angle);
-		force.scale_(this._speed * body.mass / dt);
-
-		return force;
+		const desired_velocity =
+			Vector.X
+				.rotate(vehicle.orientation + this._current_turn_rate)
+				.scale_(this._speed);
+		return (
+			desired_velocity
+				.subtract(vehicle.velocity)
+				.scale_(vehicle.mass / dt)
+		);
 	},
-
-	get max_turn_angle() { return this._max_turn_angle; },
-	set max_turn_angle(value) { this._max_turn_angle = Math.abs(+value); },
 
 	get max_turn_rate() { return this._max_turn_rate; },
 	set max_turn_rate(value) { this._max_turn_rate = Math.abs(+value); },

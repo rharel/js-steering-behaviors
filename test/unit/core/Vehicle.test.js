@@ -9,16 +9,16 @@
 const expect = require('chai').expect;
 
 const Vector = require('../../../src/math/Vector2');
-const Body = require('../../../src/core/Body');
+const Vehicle = require('../../../src/core/Vehicle');
 
 
-describe ('Body', function() {
+describe ('Vehicle', function() {
 
   describe ('constructor', function() {
 
     it ('should have default values when invoked empty', function() {
 
-      const b = new Body();
+      const b = new Vehicle();
 
       expect(b.mass).to.be.equal(1);
 
@@ -39,7 +39,7 @@ describe ('Body', function() {
 
     it ('should have given values when invoked with object', function() {
 
-      const b = new Body({
+      const b = new Vehicle({
 
         mass: 2,
 
@@ -68,7 +68,7 @@ describe ('Body', function() {
 
     it ('should allow for selective property construction', function() {
 
-      const b = new Body({mass: 2, position: new Vector(3, 4)});
+      const b = new Vehicle({mass: 2, position: new Vector(3, 4)});
 
       expect(b.mass).to.be.equal(2);
 
@@ -94,7 +94,7 @@ describe ('Body', function() {
 
     beforeEach(function() {
 
-      b = new Body();
+      b = new Vehicle();
     });
 
     it ('should add up applied forces', function() {
@@ -113,7 +113,7 @@ describe ('Body', function() {
 
     before(function() {
 
-      b = new Body({mass: 0.5, max_thrust: 9, max_speed: 8});
+      b = new Vehicle({mass: 0.5, max_thrust: 9, max_speed: 8});
       b.apply_force(new Vector(0, 10));
       b.step(2);
     });

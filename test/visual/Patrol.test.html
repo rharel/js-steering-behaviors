@@ -10,7 +10,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Seek Visual Test [js-steering-behaviors]</title>
+    <title>Patrol Visual Test [js-steering-behaviors]</title>
 
     <link rel="stylesheet" href="css/visual_test.css">
 
@@ -20,7 +20,7 @@
     <script src="js/Renderer.js"></script>
 </head>
 <body>
-<h1>Seek behavior visual test</h1>
+<h1>Patrol behavior visual test</h1>
 <script>
 
     (function() {
@@ -41,26 +41,26 @@
 				line_width: 2
 			}
 		);
-		simulation.agents.push(
+		const agent =
         {
             vehicle: new SB.Vehicle
             ({
                 position: new SB.Vector(50, 50),
-                max_thrust: 100,
+                max_thrust: 300,
                 max_speed: 200
             }),
-            behavior: new SB.Behavior.Seek(new SB.Vector(250, 50), 200)
-        });
-		simulation.agents.push(
-        {
-            vehicle: new SB.Vehicle
-            ({
-                position: new SB.Vector(251, 450),
-                max_thrust: 100,
-                max_speed: 200
-            }),
-            behavior: new SB.Behavior.Seek(new SB.Vector(250, 450), 200, true)
-        });
+            behavior: new SB.Behavior.Patrol
+            (
+                [
+                	new SB.Vector(450, 50),
+                    new SB.Vector(450, 450),
+                    new SB.Vector(50, 450),
+                    new SB.Vector(50, 50)
+                ],
+                200, 100, 5, true
+            )
+        };
+		simulation.agents.push(agent);
 
 		let t_before = new Date();
 		function main()

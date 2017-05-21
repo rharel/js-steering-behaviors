@@ -6,9 +6,10 @@
  */
 
 
-function Simulation(world_width, world_height)
+function Simulation(world_width, world_height, padding = 5)
 {
 	this._world_size = new SB.Vector(world_width, world_height);
+	this._padding = padding;
 	this._agents = [];
 }
 Simulation.prototype =
@@ -19,15 +20,15 @@ Simulation.prototype =
 	{
 		this._agents.forEach(agent =>
 		{
-			const body = agent.body;
+			const vehicle = agent.vehicle;
 			const behavior = agent.behavior;
 
-			body.net_force.set(0, 0);
-			body.apply_force(behavior.drive(body, dt));
-			body.step(dt);
+			vehicle.net_force.set(0, 0);
+			vehicle.apply_force(behavior.drive(vehicle, dt));
+			vehicle.step(dt);
 
-			this._enforce_world_bounds(body.position);
-			this._discard_small_values(body.velocity);
+			this._enforce_world_bounds(vehicle.position);
+			this._discard_small_values(vehicle.velocity);
 		});
 	},
 	_enforce_world_bounds: function(position)
@@ -36,10 +37,20 @@ Simulation.prototype =
 		if (p.x < 0 || p.x > this._world_size.x)
 		{
 			p.x = this._world_size.x - p.x;
+			p.x = Math.min
+			(
+				this._world_size.x - this._padding,
+				Math.max(this._padding, p.x)
+			);
 		}
 		if (p.y < 0 || p.y > this._world_size.y)
 		{
 			p.y = this._world_size.y - p.y;
+			p.y = Math.min
+			(
+				this._world_size.y - this._padding,
+				Math.max(this._padding, p.y)
+			);
 		}
 	},
 	_discard_small_values: function(v)
