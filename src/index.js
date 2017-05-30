@@ -38,7 +38,7 @@ const SB =
 
 module.exports = SB;
 
-if (window !== undefined)
+if (typeof window !== "undefined")
 {
 	window.SB = SB;
 }
